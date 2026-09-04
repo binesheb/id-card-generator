@@ -65,14 +65,20 @@ function currentPhotoGeometry(canvas) {
   const scale = Math.max(box.w / photo.naturalWidth, box.h / photo.naturalHeight) * photoState.zoom;
   const w = photo.naturalWidth * scale;
   const h = photo.naturalHeight * scale;
-  return { box, w, h, minX: box.x + box.w - w, maxX: box.x, minY: box.y + box.h - h, maxY: box.y };
+  const baseX = box.x + (box.w - w) / 2;
+  const baseY = box.y + (box.h - h) / 2;
+  return { box, w, h, baseX, baseY };
 }
 
 function clampPhotoPosition() {
   if (!photo) return;
-  const geometry = currentPhotoGeometry(els.frontCanvas);
-  photoState.x = Math.min(geometry.maxX - geometry.box.x, Math.max(geometry.minX - geometry.box.x, photoState.x));
-  photoState.y = Math.min(geometry.maxY - geometry.box.y, Math.max(geometry.minY - geometry.box.y, photoState.y));
+  const { box, w, h, baseX, baseY } = currentPhotoGeometry(els.frontCanvas);
+  const minOffsetX = box.x + box.w - w - baseX;
+  const maxOffsetX = box.x - baseX;
+  const minOffsetY = box.y + box.h - h - baseY;
+  const maxOffsetY = box.y - baseY;
+  photoState.x = Math.min(maxOffsetX, Math.max(minOffsetX, photoState.x));
+  photoState.y = Math.min(maxOffsetY, Math.max(minOffsetY, photoState.y));
 }
 
 function drawFront() {
@@ -81,16 +87,14 @@ function drawFront() {
   drawBackground(ctx, canvas);
 
   if (photo) {
-    const { box, w, h } = currentPhotoGeometry(canvas);
-    const x = box.x + (box.w - w) / 2 + photoState.x;
-    const y = box.y + (box.h - h) / 2 + photoState.y;
+    const { box, w, h, baseX, baseY } = currentPhotoGeometry(canvas);
     ctx.save();
     ctx.beginPath();
     ctx.rect(box.x, box.y, box.w, box.h);
     ctx.clip();
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
-    ctx.drawImage(photo, x, y, w, h);
+    ctx.drawImage(photo, baseX + photoState.x, baseY + photoState.y, w, h);
     ctx.restore();
   }
 
