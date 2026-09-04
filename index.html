@@ -3,57 +3,75 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ID Card Generator</title>
+  <title>Jayalakshmi ID Card Generator</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <main class="app-shell">
     <header class="app-header">
       <div>
-        <p class="eyebrow">PHASE 1</p>
+        <p class="eyebrow">PHASE 1 · PRINT STUDIO</p>
         <h1>ID Card Generator</h1>
-        <p class="subtitle">Create print-ready employee ID cards from your standard overlays.</p>
+        <p class="subtitle">Generate the approved employee card from a fixed overlay and variable employee data.</p>
       </div>
-      <div class="status-pill"><span></span> HROne integration: Phase 2</div>
+      <div class="status-pill"><span></span> HROne · Phase 2</div>
     </header>
 
     <section class="workspace">
-      <div class="panel form-panel">
+      <aside class="panel form-panel">
         <div class="section-heading"><h2>Employee details</h2><span>01</span></div>
-        <label>Employee Name<input id="name" type="text" placeholder="Enter full name"></label>
-        <label>Employee Code<input id="employeeCode" type="text" placeholder="e.g. JL-EMP-00125"></label>
-        <label>Designation<input id="designation" type="text" placeholder="Enter designation"></label>
+        <label>Employee Name<input id="name" type="text" placeholder="NIMIKRISHNA M A" autocomplete="off"></label>
+        <label>Employee Code<input id="employeeCode" type="text" placeholder="Enter employee code" autocomplete="off"></label>
+        <p class="field-note">Code format is intentionally not fixed yet. Its final position can be configured without changing the employee form.</p>
+        <label>Designation<input id="designation" type="text" placeholder="CUSTOMER RELATION EXECUTIVE" autocomplete="off"></label>
 
-        <div class="section-heading spaced"><h2>Photo</h2><span>02</span></div>
+        <div class="section-heading spaced"><h2>Employee photo</h2><span>02</span></div>
         <label class="upload-box" for="photoInput">
           <strong>Upload passport-size photo</strong>
-          <small>JPG, PNG or WebP · Crop and position in the preview</small>
+          <small>JPG, PNG or WebP · Drag the photo in the preview · Use zoom to crop</small>
           <input id="photoInput" type="file" accept="image/jpeg,image/png,image/webp">
         </label>
         <div class="photo-controls">
-          <label>Zoom<input id="zoom" type="range" min="1" max="3" step="0.01" value="1"></label>
-          <button id="resetPhoto" class="secondary" type="button">Reset photo</button>
+          <label>Zoom<input id="zoom" type="range" min="1" max="4" step="0.01" value="1"></label>
+          <button id="resetPhoto" class="secondary" type="button">Reset</button>
         </div>
 
-        <div class="section-heading spaced"><h2>Rear side</h2><span>03</span></div>
+        <div class="section-heading spaced"><h2>Standard overlays</h2><span>03</span></div>
+        <label class="upload-box compact" for="frontOverlayInput">
+          <strong>Front overlay</strong>
+          <small>Transparent PNG recommended</small>
+          <input id="frontOverlayInput" type="file" accept="image/png,image/jpeg,image/webp">
+        </label>
+        <label class="upload-box compact" for="backOverlayInput">
+          <strong>Rear overlay</strong>
+          <small>Transparent PNG recommended</small>
+          <input id="backOverlayInput" type="file" accept="image/png,image/jpeg,image/webp">
+        </label>
+        <p id="overlayStatus" class="field-note">No overlay loaded. The supplied standard artwork will determine the final visual layout.</p>
+
+        <div class="section-heading spaced"><h2>Rear side data</h2><span>04</span></div>
         <label>Emergency Address<textarea id="address" rows="4" placeholder="Enter emergency address"></textarea></label>
         <label>Emergency Contact<input id="contact" type="tel" placeholder="Enter contact number"></label>
         <label>Blood Group<select id="bloodGroup"><option value="">Select blood group</option><option>A+</option><option>A-</option><option>B+</option><option>B-</option><option>AB+</option><option>AB-</option><option>O+</option><option>O-</option><option>Unknown</option></select></label>
 
         <div class="actions">
           <button id="generate" class="primary" type="button">Generate JPGs</button>
-          <button id="clear" class="secondary" type="button">Clear</button>
+          <button id="clear" class="secondary" type="button">New Card</button>
         </div>
-      </div>
+      </aside>
 
-      <div class="panel preview-panel">
-        <div class="section-heading"><h2>Preview</h2><span>04</span></div>
-        <div class="previews">
-          <div class="card-preview"><div class="preview-label">FRONT</div><canvas id="frontCanvas"></canvas></div>
-          <div class="card-preview"><div class="preview-label">BACK</div><canvas id="backCanvas"></canvas></div>
+      <section class="panel preview-panel">
+        <div class="section-heading"><h2>Final-look preview</h2><span>05</span></div>
+        <div class="preview-toolbar">
+          <div><strong>Front &amp; rear</strong><span>Preview follows the supplied overlay geometry.</span></div>
+          <div class="quality-badge">600 DPI master · JPEG 100%</div>
         </div>
-        <p class="hint">Final JPGs will use the configured print dimensions and maximum JPEG quality. Overlay artwork will be applied when the standard front/rear files are added.</p>
-      </div>
+        <div class="previews">
+          <div class="card-preview"><div class="preview-label">FRONT</div><div class="canvas-wrap"><canvas id="frontCanvas"></canvas></div><small class="drag-help">Drag photo to position</small></div>
+          <div class="card-preview"><div class="preview-label">BACK</div><div class="canvas-wrap"><canvas id="backCanvas"></canvas></div></div>
+        </div>
+        <div class="export-note"><strong>Output naming</strong><span>EMPLOYEE_CODE_FRONT.jpg &nbsp;·&nbsp; EMPLOYEE_CODE_BACK.jpg</span></div>
+      </section>
     </section>
   </main>
   <script src="app.js"></script>
