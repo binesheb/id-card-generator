@@ -1,0 +1,47 @@
+{
+  "name": "jayalakshmi-id-card-generator",
+  "version": "0.1.0",
+  "description": "Windows desktop ID card generator for overlay-based employee card printing.",
+  "main": "electron-main.js",
+  "author": "binesheb",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win nsis portable",
+    "dist:portable": "electron-builder --win portable"
+  },
+  "devDependencies": {
+    "electron": "^38.0.0",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "in.jayalakshmi.idcardgenerator",
+    "productName": "Jayalakshmi ID Card Generator",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "index.html",
+      "app.js",
+      "styles.css",
+      "electron-main.js",
+      "README.md",
+      "TEMPLATE.md"
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ],
+      "artifactName": "Jayalakshmi-ID-Card-Generator-${version}-${arch}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
+  }
+}
