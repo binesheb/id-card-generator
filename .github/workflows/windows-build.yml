@@ -36,16 +36,21 @@ jobs:
       - name: Verify build outputs
         shell: pwsh
         run: |
-          $files = Get-ChildItem -Path dist -File
-          if ($files.Count -lt 2) {
-            throw "Expected installer and portable artifacts, found $($files.Count) file(s)."
-          }
-          $files | Select-Object Name, Length
+          $setup = Get-ChildItem -Path dist -Filter '*-Setup.exe' -File
+          $portable = Get-ChildItem -Path dist -Filter '*-Portable.exe' -File
+          if ($setup.Count -ne 1) { throw "Expected exactly one Windows installer, found $($setup.Count)." }
+          if ($portable.Count -ne 1) { throw "Expected exactly one portable executable, found $($portable.Count)." }
+          if ($setup.Length -lt 1MB) { throw "Installer is unexpectedly small." }
+          if ($portable.Length -lt 1MB) { throw "Portable executable is unexpectedly small." }
+          Write-Host "Installer: $($setup.FullName) ($($setup.Length) bytes)"
+          Write-Host "Portable:  $($portable.FullName) ($($portable.Length) bytes)"
 
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
         with:
           name: jayalakshmi-id-card-generator-windows
-          path: dist/*
+          path: |
+            dist/*-Setup.exe
+            dist/*-Portable.exe
           if-no-files-found: error
           retention-days: 14
