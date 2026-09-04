@@ -5,9 +5,13 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   build-windows:
     runs-on: windows-latest
+    timeout-minutes: 20
 
     steps:
       - name: Checkout
@@ -17,12 +21,27 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
 
       - name: Install dependencies
-        run: npm install
+        run: npm install --no-audit --no-fund
+
+      - name: Validate JavaScript
+        run: npm run check
 
       - name: Build Windows installer and portable app
         run: npm run dist
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+
+      - name: Verify build outputs
+        shell: pwsh
+        run: |
+          $files = Get-ChildItem -Path dist -File
+          if ($files.Count -lt 2) {
+            throw "Expected installer and portable artifacts, found $($files.Count) file(s)."
+          }
+          $files | Select-Object Name, Length
 
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
@@ -30,3 +49,4 @@ jobs:
           name: jayalakshmi-id-card-generator-windows
           path: dist/*
           if-no-files-found: error
+          retention-days: 14
