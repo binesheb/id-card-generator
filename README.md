@@ -22,20 +22,44 @@ Phase 1 is completely independent of HROne.
 - `<EMPLOYEE_CODE>_FRONT.jpg`
 - `<EMPLOYEE_CODE>_BACK.jpg`
 
-The application renders from the card canvas rather than taking a browser screenshot. JPEG export uses maximum quality (`1.0`). The production overlay dimensions are authoritative so the supplied print artwork is not arbitrarily resized to a generic ID-card ratio.
+The application renders directly from the card canvas instead of taking a browser screenshot. JPEG export uses maximum encoder quality (`1.0`). The supplied overlay pixel dimensions are authoritative; the application does not silently resize the production artwork to an assumed card ratio.
+
+The project uses a 600-DPI print-master target for calibration/documentation. The actual exported pixel dimensions come from the production overlay artwork. This is intentional: DPI metadata alone does not create additional image detail, so the final overlay should be supplied at the desired print resolution.
 
 ## Windows Application
 
-Built with Electron and electron-builder. The repository includes a GitHub Actions workflow that builds both:
+Built with Electron and electron-builder.
 
-- Windows NSIS installer
-- Windows portable executable
+The GitHub Actions workflow:
 
-After a successful GitHub Actions build, the files are available from the workflow's artifacts.
+- Installs dependencies
+- Performs JavaScript syntax validation
+- Builds Windows NSIS installer and portable executable
+- Verifies that build artifacts were created
+- Uploads the Windows artifacts for testing
+
+### Local development
+
+```bash
+npm install
+npm start
+```
+
+### Validate source
+
+```bash
+npm run check
+```
+
+### Build Windows packages
+
+```bash
+npm run dist
+```
 
 ## Overlay Model
 
-The final visual design is controlled by the supplied overlay artwork. The variable content is:
+The final visual design is controlled by the supplied overlay artwork.
 
 ### Front
 
@@ -50,7 +74,9 @@ The final visual design is controlled by the supplied overlay artwork. The varia
 - Emergency Contact
 - Blood Group
 
-The final production overlay will be used to calibrate the exact photo and text positions.
+Front and rear overlays must have identical pixel dimensions. Transparent PNG is recommended when the overlay contains artwork that should sit above the employee photo or variable fields.
+
+The photo is clipped to the configured photo rectangle, scaled to cover that rectangle, and constrained while dragging so blank gaps cannot accidentally be introduced into the final card.
 
 ## Phase 2 — HROne
 
@@ -60,18 +86,9 @@ HROne integration will be added later and will use only the permitted HROne Exte
 
 Phase 1 has no HROne dependency.
 
-## Development
+## Production calibration
 
-```bash
-npm install
-npm start
-```
-
-Build Windows packages:
-
-```bash
-npm run dist
-```
+Before using the generator for final PVC printing, supply the actual high-resolution front and rear overlay files. The current proportional photo/text coordinates are based on the supplied visual reference and are intentionally treated as provisional until the production overlays are available.
 
 ## License
 
