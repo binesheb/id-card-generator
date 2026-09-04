@@ -22,10 +22,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
 
       - name: Install dependencies
-        run: npm ci --no-audit --no-fund
+        run: npm install --no-audit --no-fund
 
       - name: Validate JavaScript
         run: npm run check
@@ -38,16 +37,16 @@ jobs:
       - name: Verify build outputs
         shell: pwsh
         run: |
-          $setup = Get-ChildItem -Path dist -Filter '*-Setup.exe' -File
-          $portable = Get-ChildItem -Path dist -Filter '*-Portable.exe' -File
+          $setup = @(Get-ChildItem -Path dist -Filter '*-Setup.exe' -File)
+          $portable = @(Get-ChildItem -Path dist -Filter '*-Portable.exe' -File)
           if ($setup.Count -ne 1) { throw "Expected exactly one Windows installer, found $($setup.Count)." }
           if ($portable.Count -ne 1) { throw "Expected exactly one portable executable, found $($portable.Count)." }
-          if ($setup.Length -lt 1MB) { throw "Installer is unexpectedly small." }
-          if ($portable.Length -lt 1MB) { throw "Portable executable is unexpectedly small." }
-          Get-FileHash $setup.FullName -Algorithm SHA256
-          Get-FileHash $portable.FullName -Algorithm SHA256
-          Write-Host "Installer: $($setup.FullName) ($($setup.Length) bytes)"
-          Write-Host "Portable:  $($portable.FullName) ($($portable.Length) bytes)"
+          if ($setup[0].Length -lt 1MB) { throw "Installer is unexpectedly small." }
+          if ($portable[0].Length -lt 1MB) { throw "Portable executable is unexpectedly small." }
+          Get-FileHash $setup[0].FullName -Algorithm SHA256
+          Get-FileHash $portable[0].FullName -Algorithm SHA256
+          Write-Host "Installer: $($setup[0].FullName) ($($setup[0].Length) bytes)"
+          Write-Host "Portable:  $($portable[0].FullName) ($($portable[0].Length) bytes)"
 
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
