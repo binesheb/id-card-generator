@@ -1,8 +1,9 @@
 const PRINT_DPI = 600;
-
-// Production overlay dimensions are authoritative. The fallback is only for first launch.
 const FALLBACK_SIZE = { width: 625, height: 965 };
 
+// Positions are proportional so the supplied production overlay controls the final canvas size.
+// These values are placeholders derived from the supplied visual reference and will be calibrated
+// against the final overlay artwork when supplied.
 const TEMPLATE = {
   photo: { x: 0.2096, y: 0.1461, w: 0.5872, h: 0.4487 },
   name: { x: 0.50, y: 0.655, maxWidth: 0.90, size: 0.050, weight: 500, letterSpacing: 0.09 },
@@ -12,7 +13,7 @@ const TEMPLATE = {
 
 const BACK_TEXT = {
   heading: { x: 0.50, y: 0.20, size: 0.042 },
-  address: { x: 0.12, y: 0.34, size: 0.028, lineGap: 0.055 },
+  address: { x: 0.12, y: 0.34, maxWidth: 0.76, size: 0.028, lineGap: 0.055 },
   contact: { x: 0.12, y: 0.67, size: 0.030 },
   blood: { x: 0.12, y: 0.77, size: 0.030 }
 };
@@ -37,8 +38,7 @@ function setCanvasSize(canvas, width, height) {
 }
 
 function getSize() {
-  if (frontOverlay) return { width: frontOverlay.naturalWidth, height: frontOverlay.naturalHeight };
-  return FALLBACK_SIZE;
+  return frontOverlay ? { width: frontOverlay.naturalWidth, height: frontOverlay.naturalHeight } : FALLBACK_SIZE;
 }
 
 function draw() {
@@ -55,35 +55,52 @@ function drawBackground(ctx, canvas) {
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 }
 
+function photoBox(canvas) {
+  const r = TEMPLATE.photo;
+  return { x: canvas.width * r.x, y: canvas.height * r.y, w: canvas.width * r.w, h: canvas.height * r.h };
+}
+
+function currentPhotoGeometry(canvas) {
+  const box = photoBox(canvas);
+  const scale = Math.max(box.w / photo.naturalWidth, box.h / photo.naturalHeight) * photoState.zoom;
+  const w = photo.naturalWidth * scale;
+  const h = photo.naturalHeight * scale;
+  return { box, w, h, minX: box.x + box.w - w, maxX: box.x, minY: box.y + box.h - h, maxY: box.y };
+}
+
+function clampPhotoPosition() {
+  if (!photo) return;
+  const geometry = currentPhotoGeometry(els.frontCanvas);
+  photoState.x = Math.min(geometry.maxX - geometry.box.x, Math.max(geometry.minX - geometry.box.x, photoState.x));
+  photoState.y = Math.min(geometry.maxY - geometry.box.y, Math.max(geometry.minY - geometry.box.y, photoState.y));
+}
+
 function drawFront() {
   const canvas = els.frontCanvas;
   const ctx = canvas.getContext('2d', { alpha: false });
   drawBackground(ctx, canvas);
 
-  const r = TEMPLATE.photo;
   if (photo) {
-    const box = { x: canvas.width*r.x, y: canvas.height*r.y, w: canvas.width*r.w, h: canvas.height*r.h };
-    const scale = Math.max(box.w / photo.naturalWidth, box.h / photo.naturalHeight) * photoState.zoom;
-    const w = photo.naturalWidth * scale;
-    const h = photo.naturalHeight * scale;
+    const { box, w, h } = currentPhotoGeometry(canvas);
     const x = box.x + (box.w - w) / 2 + photoState.x;
     const y = box.y + (box.h - h) / 2 + photoState.y;
     ctx.save();
     ctx.beginPath();
     ctx.rect(box.x, box.y, box.w, box.h);
     ctx.clip();
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
     ctx.drawImage(photo, x, y, w, h);
     ctx.restore();
   }
 
   if (frontOverlay) ctx.drawImage(frontOverlay, 0, 0, canvas.width, canvas.height);
 
-  const name = els.name.value.trim();
-  const designation = els.designation.value.trim();
-  const code = els.employeeCode.value.trim();
-  drawVariableText(ctx, name || 'EMPLOYEE NAME', TEMPLATE.name, canvas);
-  drawVariableText(ctx, designation || 'DESIGNATION', TEMPLATE.designation, canvas);
-  if (TEMPLATE.employeeCode.enabled && code) drawVariableText(ctx, code, TEMPLATE.employeeCode, canvas);
+  drawVariableText(ctx, els.name.value.trim() || 'EMPLOYEE NAME', TEMPLATE.name, canvas);
+  drawVariableText(ctx, els.designation.value.trim() || 'DESIGNATION', TEMPLATE.designation, canvas);
+  if (TEMPLATE.employeeCode.enabled && els.employeeCode.value.trim()) {
+    drawVariableText(ctx, els.employeeCode.value.trim(), TEMPLATE.employeeCode, canvas);
+  }
 }
 
 function drawBack() {
@@ -93,30 +110,38 @@ function drawBack() {
   if (backOverlay) ctx.drawImage(backOverlay, 0, 0, canvas.width, canvas.height);
 
   const scale = canvas.width;
-  drawText(ctx, 'EMERGENCY DETAILS', BACK_TEXT.heading.x*canvas.width, BACK_TEXT.heading.y*canvas.height, scale*BACK_TEXT.heading.size, 700, 'center');
+  drawText(ctx, 'EMERGENCY DETAILS', BACK_TEXT.heading.x * canvas.width, BACK_TEXT.heading.y * canvas.height, scale * BACK_TEXT.heading.size, 700, 'center');
 
-  const lines = (els.address.value.trim() || 'Emergency address').split(/\r?\n/).slice(0, 5);
-  lines.forEach((line, i) => drawText(ctx, line, BACK_TEXT.address.x*canvas.width, canvas.height*(BACK_TEXT.address.y + i*BACK_TEXT.address.lineGap), scale*BACK_TEXT.address.size, 500, 'left'));
-  drawText(ctx, `Contact: ${els.contact.value.trim() || '—'}`, BACK_TEXT.contact.x*canvas.width, BACK_TEXT.contact.y*canvas.height, scale*BACK_TEXT.contact.size, 700, 'left');
-  drawText(ctx, `Blood Group: ${els.bloodGroup.value || '—'}`, BACK_TEXT.blood.x*canvas.width, BACK_TEXT.blood.y*canvas.height, scale*BACK_TEXT.blood.size, 700, 'left');
+  const address = els.address.value.trim();
+  const lines = (address || 'Emergency address').split(/\r?\n/).slice(0, 5);
+  lines.forEach((line, i) => drawTextFitted(ctx, line, BACK_TEXT.address.x * canvas.width, canvas.height * (BACK_TEXT.address.y + i * BACK_TEXT.address.lineGap), scale * BACK_TEXT.address.size, canvas.width * BACK_TEXT.address.maxWidth, 500, 'left'));
+  drawText(ctx, `Contact: ${els.contact.value.trim() || '—'}`, BACK_TEXT.contact.x * canvas.width, BACK_TEXT.contact.y * canvas.height, scale * BACK_TEXT.contact.size, 700, 'left');
+  drawText(ctx, `Blood Group: ${els.bloodGroup.value || '—'}`, BACK_TEXT.blood.x * canvas.width, BACK_TEXT.blood.y * canvas.height, scale * BACK_TEXT.blood.size, 700, 'left');
 }
 
 function drawVariableText(ctx, value, spec, canvas) {
   const text = value.toUpperCase();
   const maxWidth = canvas.width * spec.maxWidth;
-  let size = canvas.width * spec.size;
+  let size = Math.max(14, canvas.width * spec.size);
   const weight = spec.weight || 500;
-  ctx.save();
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillStyle = '#ffffff';
-  ctx.font = `${weight} ${size}px Arial, Helvetica, sans-serif`;
-  while (ctx.measureText(text).width > maxWidth && size > 14) {
-    size -= 1;
+  while (size > 14) {
     ctx.font = `${weight} ${size}px Arial, Helvetica, sans-serif`;
+    const spacing = size * (spec.letterSpacing || 0);
+    const measured = [...text].reduce((sum, ch) => sum + ctx.measureText(ch).width, 0) + spacing * Math.max(0, text.length - 1);
+    if (measured <= maxWidth) break;
+    size -= 1;
   }
-  drawTextWithSpacing(ctx, text, spec.x*canvas.width, spec.y*canvas.height, size, weight, spec.letterSpacing || 0, '#ffffff');
-  ctx.restore();
+  drawTextWithSpacing(ctx, text, spec.x * canvas.width, spec.y * canvas.height, size, weight, spec.letterSpacing || 0, '#ffffff');
+}
+
+function drawTextFitted(ctx, value, x, y, size, maxWidth, weight, align) {
+  let current = size;
+  while (current > 12) {
+    ctx.font = `${weight} ${current}px Arial, Helvetica, sans-serif`;
+    if (ctx.measureText(value).width <= maxWidth) break;
+    current -= 1;
+  }
+  drawText(ctx, value, x, y, current, weight, align);
 }
 
 function drawText(ctx, value, x, y, size, weight, align, fill = '#18202a') {
@@ -138,54 +163,80 @@ function drawTextWithSpacing(ctx, value, x, y, size, weight, spacingRatio, fill)
   const spacing = size * spacingRatio;
   const chars = [...value];
   const widths = chars.map(ch => ctx.measureText(ch).width);
-  const total = widths.reduce((a,b) => a+b, 0) + spacing * Math.max(0, chars.length-1);
-  let cursor = x - total/2;
+  const total = widths.reduce((a, b) => a + b, 0) + spacing * Math.max(0, chars.length - 1);
+  let cursor = x - total / 2;
   chars.forEach((ch, i) => { ctx.fillText(ch, cursor, y); cursor += widths[i] + spacing; });
   ctx.restore();
 }
 
 function loadImageFile(file, callback) {
   if (!file) return;
+  if (!file.type.startsWith('image/')) {
+    alert('Please select an image file.');
+    return;
+  }
   const url = URL.createObjectURL(file);
   const img = new Image();
-  img.onload = () => { URL.revokeObjectURL(url); callback(img); draw(); };
+  img.onload = () => {
+    URL.revokeObjectURL(url);
+    if (!img.naturalWidth || !img.naturalHeight) {
+      alert('The selected image has no usable dimensions.');
+      return;
+    }
+    callback(img);
+    draw();
+  };
   img.onerror = () => { URL.revokeObjectURL(url); alert('Could not read that image.'); };
   img.src = url;
 }
 
-els.photoInput.addEventListener('change', e => {
-  loadImageFile(e.target.files?.[0], img => {
-    photo = img;
-    photoState = { x: 0, y: 0, zoom: 1 };
-    els.zoom.value = 1;
-  });
-});
+els.photoInput.addEventListener('change', e => loadImageFile(e.target.files?.[0], img => {
+  photo = img;
+  photoState = { x: 0, y: 0, zoom: 1 };
+  els.zoom.value = 1;
+}));
 
-els.frontOverlayInput.addEventListener('change', e => {
-  loadImageFile(e.target.files?.[0], img => {
-    frontOverlay = img;
-    updateOverlayStatus();
-  });
-});
+els.frontOverlayInput.addEventListener('change', e => loadImageFile(e.target.files?.[0], img => {
+  frontOverlay = img;
+  updateOverlayStatus();
+}));
 
-els.backOverlayInput.addEventListener('change', e => {
-  loadImageFile(e.target.files?.[0], img => {
-    backOverlay = img;
-    updateOverlayStatus();
-  });
-});
+els.backOverlayInput.addEventListener('change', e => loadImageFile(e.target.files?.[0], img => {
+  backOverlay = img;
+  updateOverlayStatus();
+}));
 
 function updateOverlayStatus() {
+  if (frontOverlay && backOverlay) {
+    const sameSize = frontOverlay.naturalWidth === backOverlay.naturalWidth && frontOverlay.naturalHeight === backOverlay.naturalHeight;
+    els.overlayStatus.textContent = sameSize
+      ? `Front ${frontOverlay.naturalWidth}×${frontOverlay.naturalHeight} · Rear ${backOverlay.naturalWidth}×${backOverlay.naturalHeight} · Ready`
+      : `Size mismatch: Front ${frontOverlay.naturalWidth}×${frontOverlay.naturalHeight} · Rear ${backOverlay.naturalWidth}×${backOverlay.naturalHeight}`;
+    return;
+  }
   els.overlayStatus.textContent = `${frontOverlay ? 'Front overlay loaded' : 'Front overlay missing'} · ${backOverlay ? 'Rear overlay loaded' : 'Rear overlay missing'}`;
 }
 
-els.zoom.addEventListener('input', () => { photoState.zoom = Number(els.zoom.value); draw(); });
-els.resetPhoto.addEventListener('click', () => { photoState = { x: 0, y: 0, zoom: 1 }; els.zoom.value = 1; draw(); });
+els.zoom.addEventListener('input', () => {
+  photoState.zoom = Number(els.zoom.value);
+  clampPhotoPosition();
+  draw();
+});
+
+els.resetPhoto.addEventListener('click', () => {
+  photoState = { x: 0, y: 0, zoom: 1 };
+  els.zoom.value = 1;
+  draw();
+});
+
 ['name','employeeCode','designation','address','contact','bloodGroup'].forEach(id => els[id].addEventListener('input', draw));
 
 function pointerPosition(event) {
   const rect = els.frontCanvas.getBoundingClientRect();
-  return { x: (event.clientX - rect.left) * els.frontCanvas.width / rect.width, y: (event.clientY - rect.top) * els.frontCanvas.height / rect.height };
+  return {
+    x: (event.clientX - rect.left) * els.frontCanvas.width / rect.width,
+    y: (event.clientY - rect.top) * els.frontCanvas.height / rect.height
+  };
 }
 
 els.frontCanvas.addEventListener('pointerdown', event => {
@@ -193,18 +244,27 @@ els.frontCanvas.addEventListener('pointerdown', event => {
   drag = pointerPosition(event);
   els.frontCanvas.setPointerCapture(event.pointerId);
 });
+
 els.frontCanvas.addEventListener('pointermove', event => {
   if (!drag || !photo) return;
   const p = pointerPosition(event);
   photoState.x += p.x - drag.x;
   photoState.y += p.y - drag.y;
   drag = p;
+  clampPhotoPosition();
   draw();
 });
-['pointerup','pointercancel','pointerleave'].forEach(type => els.frontCanvas.addEventListener(type, () => { drag = null; }));
+
+['pointerup','pointercancel','pointerleave'].forEach(type => els.frontCanvas.addEventListener(type, event => {
+  drag = null;
+  if (event.pointerId !== undefined && els.frontCanvas.hasPointerCapture?.(event.pointerId)) {
+    try { els.frontCanvas.releasePointerCapture(event.pointerId); } catch (_) {}
+  }
+}));
 
 function safeCode() {
-  return (els.employeeCode.value.trim() || 'EMPLOYEE_CODE').replace(/[^a-zA-Z0-9._-]+/g, '_');
+  const raw = els.employeeCode.value.trim();
+  return raw.replace(/[<>:"/\\|?*\x00-\x1F]+/g, '_').replace(/[. ]+$/g, '') || 'EMPLOYEE_CODE';
 }
 
 function jpegData(canvas) {
@@ -212,24 +272,31 @@ function jpegData(canvas) {
 }
 
 async function generateFiles() {
+  if (!frontOverlay || !backOverlay) throw new Error('Please load both the front and rear standard overlays.');
+  if (frontOverlay.naturalWidth !== backOverlay.naturalWidth || frontOverlay.naturalHeight !== backOverlay.naturalHeight) {
+    throw new Error('Front and rear overlays must have exactly the same pixel dimensions.');
+  }
+  if (!photo) throw new Error('Please upload the employee photo.');
+
+  const code = safeCode();
   const files = [
-    { name: `${safeCode()}_FRONT.jpg`, dataUrl: jpegData(els.frontCanvas) },
-    { name: `${safeCode()}_BACK.jpg`, dataUrl: jpegData(els.backCanvas) }
+    { name: `${code}_FRONT.jpg`, dataUrl: jpegData(els.frontCanvas) },
+    { name: `${code}_BACK.jpg`, dataUrl: jpegData(els.backCanvas) }
   ];
 
-  if (window.idCardDesktop) {
-    if (!outputDirectory) outputDirectory = await window.idCardDesktop.chooseOutputDirectory();
-    if (!outputDirectory) return false;
-    await window.idCardDesktop.saveJpgs({ directory: outputDirectory, files });
+  if (!window.idCardDesktop) {
+    files.forEach(file => {
+      const link = document.createElement('a');
+      link.download = file.name;
+      link.href = file.dataUrl;
+      link.click();
+    });
     return true;
   }
 
-  files.forEach(file => {
-    const link = document.createElement('a');
-    link.download = file.name;
-    link.href = file.dataUrl;
-    link.click();
-  });
+  if (!outputDirectory) outputDirectory = await window.idCardDesktop.chooseOutputDirectory();
+  if (!outputDirectory) return false;
+  await window.idCardDesktop.saveJpgs({ directory: outputDirectory, files });
   return true;
 }
 
@@ -239,16 +306,13 @@ els.generate.addEventListener('click', async () => {
     els.employeeCode.focus();
     return;
   }
-  if (!frontOverlay || !backOverlay) {
-    if (!confirm('One or both standard overlays are not loaded. Generate using the current template anyway?')) return;
-  }
   draw();
   try {
     const saved = await generateFiles();
     if (saved) alert(`ID card JPGs generated successfully.\n\n${safeCode()}_FRONT.jpg\n${safeCode()}_BACK.jpg`);
   } catch (error) {
     console.error(error);
-    alert(`Could not save the JPG files.\n\n${error.message || error}`);
+    alert(`Could not generate the JPG files.\n\n${error.message || error}`);
   }
 });
 
@@ -258,7 +322,9 @@ els.clear.addEventListener('click', () => {
   els.photoInput.value = '';
   els.frontOverlayInput.value = '';
   els.backOverlayInput.value = '';
-  photo = null; frontOverlay = null; backOverlay = null;
+  photo = null;
+  frontOverlay = null;
+  backOverlay = null;
   outputDirectory = null;
   photoState = { x: 0, y: 0, zoom: 1 };
   els.zoom.value = 1;
