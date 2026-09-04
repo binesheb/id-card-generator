@@ -1,11 +1,8 @@
 const PRINT_DPI = 600;
 
-// The sample supplied for the approved design is portrait. Once the production
-// overlay is supplied, its aspect ratio becomes authoritative for the canvas.
+// Production overlay dimensions are authoritative. The fallback is only for first launch.
 const FALLBACK_SIZE = { width: 625, height: 965 };
 
-// All front coordinates are ratios so the same layout scales to any overlay size.
-// These are based on the supplied final-look reference and can be adjusted in one place.
 const TEMPLATE = {
   photo: { x: 0.2096, y: 0.1461, w: 0.5872, h: 0.4487 },
   name: { x: 0.50, y: 0.655, maxWidth: 0.90, size: 0.050, weight: 500, letterSpacing: 0.09 },
@@ -32,6 +29,7 @@ let frontOverlay = null;
 let backOverlay = null;
 let photoState = { x: 0, y: 0, zoom: 1 };
 let drag = null;
+let outputDirectory = null;
 
 function setCanvasSize(canvas, width, height) {
   canvas.width = width;
@@ -78,16 +76,14 @@ function drawFront() {
     ctx.restore();
   }
 
-  // Overlay is drawn above the photo so its transparent artwork/frame is preserved.
   if (frontOverlay) ctx.drawImage(frontOverlay, 0, 0, canvas.width, canvas.height);
 
-  // Variable text is deliberately rendered last. Fixed artwork therefore remains in the overlay.
   const name = els.name.value.trim();
   const designation = els.designation.value.trim();
   const code = els.employeeCode.value.trim();
-  drawVariableText(ctx, name || 'EMPLOYEE NAME', TEMPLATE.name, canvas, true);
-  drawVariableText(ctx, designation || 'DESIGNATION', TEMPLATE.designation, canvas, false);
-  if (TEMPLATE.employeeCode.enabled && code) drawVariableText(ctx, code, TEMPLATE.employeeCode, canvas, false);
+  drawVariableText(ctx, name || 'EMPLOYEE NAME', TEMPLATE.name, canvas);
+  drawVariableText(ctx, designation || 'DESIGNATION', TEMPLATE.designation, canvas);
+  if (TEMPLATE.employeeCode.enabled && code) drawVariableText(ctx, code, TEMPLATE.employeeCode, canvas);
 }
 
 function drawBack() {
@@ -97,8 +93,7 @@ function drawBack() {
   if (backOverlay) ctx.drawImage(backOverlay, 0, 0, canvas.width, canvas.height);
 
   const scale = canvas.width;
-  const heading = 'EMERGENCY DETAILS';
-  drawText(ctx, heading, BACK_TEXT.heading.x*canvas.width, BACK_TEXT.heading.y*canvas.height, scale*BACK_TEXT.heading.size, 700, 'center');
+  drawText(ctx, 'EMERGENCY DETAILS', BACK_TEXT.heading.x*canvas.width, BACK_TEXT.heading.y*canvas.height, scale*BACK_TEXT.heading.size, 700, 'center');
 
   const lines = (els.address.value.trim() || 'Emergency address').split(/\r?\n/).slice(0, 5);
   lines.forEach((line, i) => drawText(ctx, line, BACK_TEXT.address.x*canvas.width, canvas.height*(BACK_TEXT.address.y + i*BACK_TEXT.address.lineGap), scale*BACK_TEXT.address.size, 500, 'left'));
@@ -106,22 +101,20 @@ function drawBack() {
   drawText(ctx, `Blood Group: ${els.bloodGroup.value || '—'}`, BACK_TEXT.blood.x*canvas.width, BACK_TEXT.blood.y*canvas.height, scale*BACK_TEXT.blood.size, 700, 'left');
 }
 
-function drawVariableText(ctx, value, spec, canvas, uppercase) {
-  const text = uppercase ? value.toUpperCase() : value.toUpperCase();
+function drawVariableText(ctx, value, spec, canvas) {
+  const text = value.toUpperCase();
   const maxWidth = canvas.width * spec.maxWidth;
   let size = canvas.width * spec.size;
-  const family = 'Arial, Helvetica, sans-serif';
   const weight = spec.weight || 500;
   ctx.save();
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillStyle = '#ffffff';
-  ctx.font = `${weight} ${size}px ${family}`;
+  ctx.font = `${weight} ${size}px Arial, Helvetica, sans-serif`;
   while (ctx.measureText(text).width > maxWidth && size > 14) {
     size -= 1;
-    ctx.font = `${weight} ${size}px ${family}`;
+    ctx.font = `${weight} ${size}px Arial, Helvetica, sans-serif`;
   }
-  // Letter spacing is approximated for broad browser compatibility.
   drawTextWithSpacing(ctx, text, spec.x*canvas.width, spec.y*canvas.height, size, weight, spec.letterSpacing || 0, '#ffffff');
   ctx.restore();
 }
@@ -143,10 +136,11 @@ function drawTextWithSpacing(ctx, value, x, y, size, weight, spacingRatio, fill)
   ctx.font = `${weight} ${size}px Arial, Helvetica, sans-serif`;
   ctx.textBaseline = 'middle';
   const spacing = size * spacingRatio;
-  const widths = [...value].map(ch => ctx.measureText(ch).width);
-  const total = widths.reduce((a,b) => a+b, 0) + spacing * Math.max(0, value.length-1);
+  const chars = [...value];
+  const widths = chars.map(ch => ctx.measureText(ch).width);
+  const total = widths.reduce((a,b) => a+b, 0) + spacing * Math.max(0, chars.length-1);
   let cursor = x - total/2;
-  [...value].forEach((ch, i) => { ctx.fillText(ch, cursor, y); cursor += widths[i] + spacing; });
+  chars.forEach((ch, i) => { ctx.fillText(ch, cursor, y); cursor += widths[i] + spacing; });
   ctx.restore();
 }
 
@@ -187,7 +181,6 @@ function updateOverlayStatus() {
 
 els.zoom.addEventListener('input', () => { photoState.zoom = Number(els.zoom.value); draw(); });
 els.resetPhoto.addEventListener('click', () => { photoState = { x: 0, y: 0, zoom: 1 }; els.zoom.value = 1; draw(); });
-
 ['name','employeeCode','designation','address','contact','bloodGroup'].forEach(id => els[id].addEventListener('input', draw));
 
 function pointerPosition(event) {
@@ -214,22 +207,49 @@ function safeCode() {
   return (els.employeeCode.value.trim() || 'EMPLOYEE_CODE').replace(/[^a-zA-Z0-9._-]+/g, '_');
 }
 
-function download(canvas, suffix) {
-  const link = document.createElement('a');
-  link.download = `${safeCode()}_${suffix}.jpg`;
-  link.href = canvas.toDataURL('image/jpeg', 1.0);
-  link.click();
+function jpegData(canvas) {
+  return canvas.toDataURL('image/jpeg', 1.0);
 }
 
-els.generate.addEventListener('click', () => {
+async function generateFiles() {
+  const files = [
+    { name: `${safeCode()}_FRONT.jpg`, dataUrl: jpegData(els.frontCanvas) },
+    { name: `${safeCode()}_BACK.jpg`, dataUrl: jpegData(els.backCanvas) }
+  ];
+
+  if (window.idCardDesktop) {
+    if (!outputDirectory) outputDirectory = await window.idCardDesktop.chooseOutputDirectory();
+    if (!outputDirectory) return false;
+    await window.idCardDesktop.saveJpgs({ directory: outputDirectory, files });
+    return true;
+  }
+
+  files.forEach(file => {
+    const link = document.createElement('a');
+    link.download = file.name;
+    link.href = file.dataUrl;
+    link.click();
+  });
+  return true;
+}
+
+els.generate.addEventListener('click', async () => {
   if (!els.employeeCode.value.trim()) {
     alert('Please enter Employee Code before generating the JPG files.');
     els.employeeCode.focus();
     return;
   }
+  if (!frontOverlay || !backOverlay) {
+    if (!confirm('One or both standard overlays are not loaded. Generate using the current template anyway?')) return;
+  }
   draw();
-  download(els.frontCanvas, 'FRONT');
-  setTimeout(() => download(els.backCanvas, 'BACK'), 300);
+  try {
+    const saved = await generateFiles();
+    if (saved) alert(`ID card JPGs generated successfully.\n\n${safeCode()}_FRONT.jpg\n${safeCode()}_BACK.jpg`);
+  } catch (error) {
+    console.error(error);
+    alert(`Could not save the JPG files.\n\n${error.message || error}`);
+  }
 });
 
 els.clear.addEventListener('click', () => {
@@ -239,6 +259,7 @@ els.clear.addEventListener('click', () => {
   els.frontOverlayInput.value = '';
   els.backOverlayInput.value = '';
   photo = null; frontOverlay = null; backOverlay = null;
+  outputDirectory = null;
   photoState = { x: 0, y: 0, zoom: 1 };
   els.zoom.value = 1;
   updateOverlayStatus();
