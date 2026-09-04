@@ -1,6 +1,6 @@
 {
   "name": "jayalakshmi-id-card-generator",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Windows desktop ID card generator for overlay-based employee card printing.",
   "main": "electron-main.js",
   "author": "binesheb",
@@ -9,9 +9,9 @@
   "scripts": {
     "start": "electron .",
     "check": "node --check app.js && node --check electron-main.js && node --check preload.js",
-    "dist": "electron-builder --win nsis portable",
-    "dist:installer": "electron-builder --win nsis",
-    "dist:portable": "electron-builder --win portable"
+    "dist": "electron-builder --win nsis portable --publish never",
+    "dist:installer": "electron-builder --win nsis --publish never",
+    "dist:portable": "electron-builder --win portable --publish never"
   },
   "devDependencies": {
     "electron": "^38.0.0",
@@ -23,6 +23,7 @@
     "directories": {
       "output": "dist"
     },
+    "asar": true,
     "files": [
       "index.html",
       "app.js",
@@ -32,20 +33,22 @@
       "README.md",
       "TEMPLATE.md"
     ],
-    "asar": true,
     "win": {
       "target": [
         "nsis",
         "portable"
-      ],
-      "artifactName": "Jayalakshmi-ID-Card-Generator-${version}-${arch}.${ext}"
+      ]
     },
     "nsis": {
+      "artifactName": "Jayalakshmi-ID-Card-Generator-${version}-${arch}-Setup.${ext}",
       "oneClick": false,
       "perMachine": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true
+    },
+    "portable": {
+      "artifactName": "Jayalakshmi-ID-Card-Generator-${version}-${arch}-Portable.${ext}"
     }
   }
 }
