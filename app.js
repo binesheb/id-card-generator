@@ -2,12 +2,11 @@ const PRINT_DPI = 600;
 const FALLBACK_SIZE = { width: 625, height: 965 };
 
 // Positions are proportional so the supplied production overlay controls the final canvas size.
-// These values are placeholders derived from the supplied visual reference and will be calibrated
-// against the final overlay artwork when supplied.
+// Font sizing is calibrated against the supplied 625x965 reference image.
 const TEMPLATE = {
   photo: { x: 0.2096, y: 0.1461, w: 0.5872, h: 0.4487 },
-  name: { x: 0.50, y: 0.655, maxWidth: 0.90, size: 0.050, weight: 500, letterSpacing: 0.09 },
-  designation: { x: 0.50, y: 0.719, maxWidth: 0.94, size: 0.035, weight: 700, letterSpacing: 0.025 },
+  name: { x: 0.50, y: 0.655, maxWidth: 0.90, size: 0.068, weight: 500, letterSpacing: 0.09 },
+  designation: { x: 0.50, y: 0.719, maxWidth: 0.94, size: 0.045, weight: 700, letterSpacing: 0.025 },
   employeeCode: { x: 0.50, y: 0.772, maxWidth: 0.70, size: 0.022, weight: 600, enabled: true }
 };
 
