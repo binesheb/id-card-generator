@@ -1,6 +1,6 @@
 {
   "name": "jayalakshmi-id-card-generator",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Windows desktop ID card generator for overlay-based employee card printing.",
   "main": "electron-main.js",
   "author": "binesheb",
@@ -31,7 +31,8 @@
       "electron-main.js",
       "preload.js",
       "README.md",
-      "TEMPLATE.md"
+      "TEMPLATE.md",
+      "fonts/**/*"
     ],
     "win": {
       "target": [
