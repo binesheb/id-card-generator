@@ -3,6 +3,7 @@ name: Build Windows App
 on:
   push:
     branches: [main]
+    tags: ['v*.*.*']
   workflow_dispatch:
 
 permissions:
@@ -21,9 +22,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
 
       - name: Install dependencies
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
 
       - name: Validate JavaScript
         run: npm run check
@@ -42,6 +44,8 @@ jobs:
           if ($portable.Count -ne 1) { throw "Expected exactly one portable executable, found $($portable.Count)." }
           if ($setup.Length -lt 1MB) { throw "Installer is unexpectedly small." }
           if ($portable.Length -lt 1MB) { throw "Portable executable is unexpectedly small." }
+          Get-FileHash $setup.FullName -Algorithm SHA256
+          Get-FileHash $portable.FullName -Algorithm SHA256
           Write-Host "Installer: $($setup.FullName) ($($setup.Length) bytes)"
           Write-Host "Portable:  $($portable.FullName) ($($portable.Length) bytes)"
 
@@ -54,3 +58,13 @@ jobs:
             dist/*-Portable.exe
           if-no-files-found: error
           retention-days: 14
+
+      - name: Publish tagged release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          generate_release_notes: true
+          files: |
+            dist/*-Setup.exe
+            dist/*-Portable.exe
