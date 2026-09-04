@@ -1,5 +1,6 @@
 const PRINT_DPI = 600;
 const FALLBACK_SIZE = { width: 625, height: 965 };
+const CARD_FONT = 'Satoshi, Arial, Helvetica, sans-serif';
 
 // Positions are proportional so the supplied production overlay controls the final canvas size.
 // Font sizing is calibrated against the supplied 625x965 reference image.
@@ -122,13 +123,17 @@ function drawBack() {
   drawText(ctx, `Blood Group: ${els.bloodGroup.value || '—'}`, BACK_TEXT.blood.x * canvas.width, BACK_TEXT.blood.y * canvas.height, scale * BACK_TEXT.blood.size, 700, 'left');
 }
 
+function setCardFont(ctx, weight, size) {
+  ctx.font = `${weight} ${size}px ${CARD_FONT}`;
+}
+
 function drawVariableText(ctx, value, spec, canvas) {
   const text = value.toUpperCase();
   const maxWidth = canvas.width * spec.maxWidth;
   let size = Math.max(14, canvas.width * spec.size);
   const weight = spec.weight || 500;
   while (size > 14) {
-    ctx.font = `${weight} ${size}px Arial, Helvetica, sans-serif`;
+    setCardFont(ctx, weight, size);
     const spacing = size * (spec.letterSpacing || 0);
     const measured = [...text].reduce((sum, ch) => sum + ctx.measureText(ch).width, 0) + spacing * Math.max(0, text.length - 1);
     if (measured <= maxWidth) break;
@@ -140,7 +145,7 @@ function drawVariableText(ctx, value, spec, canvas) {
 function drawTextFitted(ctx, value, x, y, size, maxWidth, weight, align) {
   let current = size;
   while (current > 12) {
-    ctx.font = `${weight} ${current}px Arial, Helvetica, sans-serif`;
+    setCardFont(ctx, weight, current);
     if (ctx.measureText(value).width <= maxWidth) break;
     current -= 1;
   }
@@ -152,7 +157,7 @@ function drawText(ctx, value, x, y, size, weight, align, fill = '#18202a') {
   ctx.fillStyle = fill;
   ctx.textAlign = align;
   ctx.textBaseline = 'middle';
-  ctx.font = `${weight} ${size}px Arial, Helvetica, sans-serif`;
+  setCardFont(ctx, weight, size);
   ctx.fillText(value, x, y);
   ctx.restore();
 }
@@ -161,7 +166,7 @@ function drawTextWithSpacing(ctx, value, x, y, size, weight, spacingRatio, fill)
   if (!spacingRatio) return drawText(ctx, value, x, y, size, weight, 'center', fill);
   ctx.save();
   ctx.fillStyle = fill;
-  ctx.font = `${weight} ${size}px Arial, Helvetica, sans-serif`;
+  setCardFont(ctx, weight, size);
   ctx.textBaseline = 'middle';
   const spacing = size * spacingRatio;
   const chars = [...value];
