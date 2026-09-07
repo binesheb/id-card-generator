@@ -276,7 +276,40 @@ function safeCode() {
 }
 
 function jpegData(canvas) {
-  return canvas.toDataURL('image/jpeg', 1.0);
+  const dataUrl = canvas.toDataURL('image/jpeg', 1.0);
+  return stampJpegDpi(dataUrl, PRINT_DPI);
+}
+
+function stampJpegDpi(dataUrl, dpi) {
+  try {
+    const base64 = dataUrl.split(',')[1];
+    const bytes = Uint8Array.from(atob(base64), char => char.charCodeAt(0));
+    // Canvas JPEGs normally contain a JFIF APP0 segment. Set its density to 600 DPI.
+    for (let i = 0; i + 15 < bytes.length; i++) {
+      if (bytes[i] === 0xFF && bytes[i + 1] === 0xE0 &&
+          bytes[i + 4] === 0x4A && bytes[i + 5] === 0x46 && bytes[i + 6] === 0x49 &&
+          bytes[i + 7] === 0x46 && bytes[i + 8] === 0x00) {
+        bytes[i + 11] = 1; // units: dots per inch
+        bytes[i + 12] = (dpi >> 8) & 0xFF;
+        bytes[i + 13] = dpi & 0xFF;
+        bytes[i + 14] = (dpi >> 8) & 0xFF;
+        bytes[i + 15] = dpi & 0xFF;
+        let binary = '';
+        const chunk = 0x8000;
+        for (let p = 0; p < bytes.length; p += chunk) binary += String.fromCharCode(...bytes.subarray(p, p + chunk));
+        return `data:image/jpeg;base64,${btoa(binary)}`;
+      }
+    }
+  } catch (error) {
+    console.warn('Could not stamp JPEG DPI metadata; retaining the original JPEG.', error);
+  }
+  return dataUrl;
+}
+
+async function waitForFonts() {
+  if (document.fonts?.ready) {
+    try { await document.fonts.ready; } catch (_) {}
+  }
 }
 
 async function generateFiles() {
@@ -285,6 +318,9 @@ async function generateFiles() {
     throw new Error('Front and rear overlays must have exactly the same pixel dimensions.');
   }
   if (!photo) throw new Error('Please upload the employee photo.');
+
+  await waitForFonts();
+  draw();
 
   const code = safeCode();
   const files = [
@@ -314,7 +350,6 @@ els.generate.addEventListener('click', async () => {
     els.employeeCode.focus();
     return;
   }
-  draw();
   try {
     const saved = await generateFiles();
     if (saved) alert(`ID card JPGs generated successfully.\n\n${safeCode()}_FRONT.jpg\n${safeCode()}_BACK.jpg`);
@@ -342,3 +377,4 @@ els.clear.addEventListener('click', () => {
 
 updateOverlayStatus();
 draw();
+waitForFonts().then(draw);
