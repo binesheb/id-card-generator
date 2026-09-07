@@ -1,9 +1,59 @@
 const { app, BrowserWindow, Menu, dialog, ipcMain, shell } = require('electron');
+const { autoUpdater } = require('electron-updater');
 const fs = require('fs');
 const path = require('path');
 
+let mainWindow;
+
+function sendUpdateStatus(status, data = {}) {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('update-status', { status, ...data });
+  }
+}
+
+function configureAutoUpdater() {
+  autoUpdater.autoDownload = false;
+  autoUpdater.autoInstallOnAppQuit = true;
+  autoUpdater.allowDowngrade = false;
+
+  autoUpdater.on('checking-for-update', () => sendUpdateStatus('checking'));
+  autoUpdater.on('update-available', info => sendUpdateStatus('available', { version: info.version }));
+  autoUpdater.on('update-not-available', info => sendUpdateStatus('up-to-date', { version: info.version }));
+  autoUpdater.on('download-progress', progress => sendUpdateStatus('downloading', { percent: progress.percent, transferred: progress.transferred, total: progress.total }));
+  autoUpdater.on('update-downloaded', info => sendUpdateStatus('downloaded', { version: info.version }));
+  autoUpdater.on('error', error => sendUpdateStatus('error', { message: error?.message || 'Update check failed.' }));
+}
+
+async function checkForUpdates() {
+  if (!app.isPackaged) {
+    sendUpdateStatus('dev', { message: 'Update checks are available in the installed Windows application.' });
+    return { status: 'dev' };
+  }
+  try {
+    const result = await autoUpdater.checkForUpdates();
+    return result?.updateInfo || null;
+  } catch (error) {
+    sendUpdateStatus('error', { message: error?.message || 'Unable to check for updates.' });
+    return null;
+  }
+}
+
+ipcMain.handle('check-for-updates', () => checkForUpdates());
+
+ipcMain.handle('download-update', async () => {
+  if (!app.isPackaged) throw new Error('Updates are available only in the installed Windows application.');
+  await autoUpdater.downloadUpdate();
+  return true;
+});
+
+ipcMain.handle('install-update', () => {
+  if (!app.isPackaged) return false;
+  autoUpdater.quitAndInstall(false, true);
+  return true;
+});
+
 function createWindow() {
-  const win = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     width: 1440,
     height: 920,
     minWidth: 1050,
@@ -18,12 +68,14 @@ function createWindow() {
     }
   });
 
-  win.loadFile(path.join(__dirname, 'index.html'));
+  mainWindow.loadFile(path.join(__dirname, 'index.html'));
 
-  win.webContents.setWindowOpenHandler(({ url }) => {
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     shell.openExternal(url);
     return { action: 'deny' };
   });
+
+  mainWindow.on('closed', () => { mainWindow = null; });
 }
 
 ipcMain.handle('choose-output-directory', async () => {
@@ -55,12 +107,16 @@ ipcMain.handle('save-jpgs', async (_event, payload) => {
 });
 
 app.whenReady().then(() => {
+  configureAutoUpdater();
   Menu.setApplicationMenu(null);
   createWindow();
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
+
+  // Check once after startup without interrupting the card-generation workflow.
+  setTimeout(() => checkForUpdates(), 5000);
 });
 
 app.on('window-all-closed', () => {
