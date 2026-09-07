@@ -46,17 +46,29 @@ const app = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
 for (const token of ['toDataURL','jpegData','chooseOutputDirectory','frontOverlay','backOverlay','photoState','safeCode','roundedRectPath','drawInfoCard','saveJpgs']) {
   if (!app.includes(token)) throw new Error(`Missing application capability: ${token}`);
 }
+if (!app.includes('FileReader')) throw new Error('Photo thumbnail persistence is not implemented.');
 
 const functional = fs.readFileSync(path.join(root, 'functional-ui.js'), 'utf8');
 for (const token of ['openCrop','bakeCrop','preview','downloadJpgs','printCards','saveTemplate','templates','setInputFile','DataTransfer']) {
   if (!functional.includes(token)) throw new Error(`Missing functional UI capability: ${token}`);
 }
+if (!functional.includes('TEMPLATE_PHOTO_RATIO=(625*0.5872)/(965*0.4487)')) throw new Error('Crop aspect ratio is not tied to the actual card photo slot.');
+if (functional.includes('const TEMPLATE_RATIO=0.5872/0.4487')) throw new Error('Old incorrect crop aspect ratio is still present.');
 if (functional.includes('Template saving will store the current design settings')) throw new Error('Placeholder template action is still present.');
 if (functional.includes('Template library is ready for the next template-management phase')) throw new Error('Placeholder template library action is still present.');
+
+const ui = fs.readFileSync(path.join(root, 'ui-enhancements.js'), 'utf8');
+if (ui.includes("$('resetPhoto')")) throw new Error('Duplicate Crop/Adjust handler remains in ui-enhancements.js.');
+if (ui.includes('applyCropPosition')) throw new Error('Legacy synthetic crop handler remains in ui-enhancements.js.');
+
+const workflow = fs.readFileSync(path.join(root, '.github/workflows/windows-build.yml'), 'utf8');
+for (const token of ['actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1', 'actions/setup-node@820762786026740c76f36085b0efc47a31fe5020', 'actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f', 'softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228', 'node-version: 24', "FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'"]) {
+  if (!workflow.includes(token)) throw new Error(`CI Node 24 migration is incomplete: ${token}`);
+}
 
 const main = fs.readFileSync(path.join(root, 'electron-main.js'), 'utf8');
 for (const token of ['autoUpdater','contextIsolation: true','nodeIntegration: false','sandbox: true','save-jpgs','window-control']) {
   if (!main.includes(token)) throw new Error(`Missing desktop capability/security setting: ${token}`);
 }
 
-console.log(`Smoke check passed: ${requiredFiles.length} required files, JavaScript syntax, UI wiring, generation, crop, preview, download, print, template, and desktop capabilities verified.`);
+console.log(`Smoke check passed: ${requiredFiles.length} required files, JavaScript syntax, UI wiring, generation, crop, preview, download, print, templates, thumbnail persistence, CI Node 24 migration, and desktop capabilities verified.`);
