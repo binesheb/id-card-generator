@@ -4,10 +4,16 @@ All user-facing features, fixes, and improvements are released as versioned buil
 
 ## Unreleased
 
+Future changes will remain here until the next version is prepared.
+
+## 0.1.6
+
 - Refined rounded photo presentation and positioning.
-- Improved front-side employee name and employee-code readability.
-- Improved rear-side emergency information cards for readability.
-- Continued Windows build and validation hardening.
+- Moved the employee name lower to avoid photo overlap.
+- Increased employee-code size and improved placement for print readability.
+- Improved rear-side emergency address, contact, and blood-group cards for readability.
+- Added mandatory release versioning and release validation.
+- Added a documented release policy for Windows installer, portable executable, updater metadata, and GitHub Releases.
 
 ## 0.1.5
 
