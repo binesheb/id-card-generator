@@ -8,7 +8,7 @@
   "private": true,
   "scripts": {
     "start": "electron .",
-    "check": "node --check app.js && node --check electron-main.js && node --check preload.js",
+    "check": "node --check app.js && node --check electron-main.js && node --check preload.js && node --check updater-renderer.js",
     "dist": "electron-builder --win nsis portable --publish never",
     "dist:installer": "electron-builder --win nsis --publish never",
     "dist:portable": "electron-builder --win portable --publish never"
@@ -31,6 +31,7 @@
       "styles.css",
       "electron-main.js",
       "preload.js",
+      "updater-renderer.js",
       "README.md",
       "TEMPLATE.md",
       "fonts/**/*"
