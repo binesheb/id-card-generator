@@ -4,84 +4,37 @@
   if (!button || !status || !window.idCardDesktop) return;
 
   let updateReady = false;
-
-  const setStatus = (text) => {
-    status.innerHTML = `<span></span> ${text}`;
-  };
+  const settingsLabel = 'Settings';
+  const setStatus = text => { status.innerHTML = `<span></span> ${text}`; };
+  const resetButton = () => { button.disabled = false; button.textContent = settingsLabel; };
 
   button.addEventListener('click', async () => {
     if (updateReady) {
       button.disabled = true;
-      button.textContent = 'Installing…';
-      try {
-        await window.idCardDesktop.installUpdate();
-      } catch (error) {
-        button.disabled = false;
-        button.textContent = 'Install Update';
-        setStatus(`Update failed · ${error?.message || 'Please try again'}`);
-      }
+      setStatus('Installing update…');
+      try { await window.idCardDesktop.installUpdate(); }
+      catch (error) { resetButton(); setStatus(`Update failed · ${error?.message || 'Please try again'}`); }
       return;
     }
-
     button.disabled = true;
-    button.textContent = 'Checking…';
     setStatus('Checking for updates…');
-    try {
-      await window.idCardDesktop.checkForUpdates();
-    } catch (error) {
-      button.disabled = false;
-      button.textContent = 'Check for Updates';
-      setStatus('Update check failed');
-    }
+    try { await window.idCardDesktop.checkForUpdates(); }
+    catch (error) { resetButton(); setStatus('Update check failed'); }
   });
 
   window.idCardDesktop.onUpdateStatus(async ({ status: state, version, percent, message }) => {
-    if (state === 'checking') {
-      setStatus('Checking for updates…');
-      return;
-    }
-    if (state === 'up-to-date') {
-      button.disabled = false;
-      button.textContent = 'Check for Updates';
-      setStatus(`Up to date · v${version || ''}`.trim());
-      return;
-    }
+    if (state === 'checking') { setStatus('Checking for updates…'); return; }
+    if (state === 'up-to-date') { resetButton(); setStatus(`Up to date · v${version || ''}`.trim()); return; }
     if (state === 'available') {
       setStatus(`Update available · v${version}`);
       button.disabled = true;
-      button.textContent = 'Downloading…';
-      try {
-        await window.idCardDesktop.downloadUpdate();
-      } catch (error) {
-        button.disabled = false;
-        button.textContent = 'Check for Updates';
-        setStatus(`Download failed · ${error?.message || 'Please try again'}`);
-      }
+      try { await window.idCardDesktop.downloadUpdate(); }
+      catch (error) { resetButton(); setStatus(`Download failed · ${error?.message || 'Please try again'}`); }
       return;
     }
-    if (state === 'downloading') {
-      button.disabled = true;
-      button.textContent = `Downloading ${Math.round(percent || 0)}%`;
-      setStatus('Downloading update…');
-      return;
-    }
-    if (state === 'downloaded') {
-      updateReady = true;
-      button.disabled = false;
-      button.textContent = 'Install Update';
-      setStatus(`Update ready · v${version}`);
-      return;
-    }
-    if (state === 'error') {
-      button.disabled = false;
-      button.textContent = 'Check for Updates';
-      setStatus(`Update unavailable · ${message || 'Check your connection'}`);
-      return;
-    }
-    if (state === 'dev') {
-      button.disabled = false;
-      button.textContent = 'Check for Updates';
-      setStatus('Install the Windows app to use updates');
-    }
+    if (state === 'downloading') { button.disabled = true; setStatus(`Downloading update · ${Math.round(percent || 0)}%`); return; }
+    if (state === 'downloaded') { updateReady = true; button.disabled = false; button.textContent = 'Update Ready'; setStatus(`Update ready · v${version}`); return; }
+    if (state === 'error') { resetButton(); setStatus(`Update unavailable · ${message || 'Check your connection'}`); return; }
+    if (state === 'dev') { resetButton(); setStatus('Install the Windows app to use updates'); }
   });
 })();
