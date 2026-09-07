@@ -8,76 +8,92 @@
 </head>
 <body>
   <main class="app-shell">
-    <header class="app-header">
-      <div>
-        <p class="eyebrow">PHASE 1 · PRINT STUDIO</p>
-        <h1>ID Card Generator</h1>
-        <p class="subtitle">Generate the approved employee card from a fixed overlay and variable employee data.</p>
+    <header class="topbar">
+      <div class="brand-lockup">
+        <div class="brand-mark" aria-label="Jayalakshmi">
+          <span class="brand-small">പൈതൃകം</span>
+          <span class="brand-script">Jayalakshmi</span>
+          <span class="brand-since">SINCE 1947</span>
+        </div>
+        <div class="product-title"><h1>ID Card Generator <span>v0.2.0</span></h1></div>
       </div>
-      <div class="header-actions">
-        <button id="checkUpdates" class="secondary update-button" type="button">Check for Updates</button>
-        <div id="updateStatus" class="status-pill"><span></span> Update service ready</div>
-      </div>
+      <nav class="top-actions" aria-label="Application actions">
+        <button class="top-action" type="button" id="templatesButton"><svg viewBox="0 0 24 24"><path d="M3 7.5 5.5 4h6l2 2.5H21v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M3 9h18"/></svg>Templates</button>
+        <button class="top-action" type="button" id="checkUpdates" title="Settings and application updates"><svg viewBox="0 0 24 24"><path d="M12 2v3M12 19v3M4.93 4.93l2.12 2.12M16.95 16.95l2.12 2.12M2 12h3M19 12h3M4.93 19.07l2.12-2.12M16.95 7.05l2.12-2.12"/><circle cx="12" cy="12" r="3.5"/></svg>Settings</button>
+        <button class="top-action" type="button" id="aboutButton"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5"/><path d="M12 10.5v6M12 7.5h.01"/></svg>About</button>
+      </nav>
+      <div class="window-controls"><button type="button" data-window-action="minimize" aria-label="Minimize">−</button><button type="button" data-window-action="maximize" aria-label="Maximize">□</button><button type="button" data-window-action="close" aria-label="Close">×</button></div>
     </header>
 
-    <section class="workspace">
-      <aside class="panel form-panel">
-        <div class="section-heading"><h2>Employee details</h2><span>01</span></div>
-        <label>Employee Name<input id="name" type="text" placeholder="NIMIKRISHNA M A" autocomplete="off"></label>
-        <label>Employee Code<input id="employeeCode" type="text" placeholder="Enter employee code" autocomplete="off"></label>
-        <p class="field-note">Code format is intentionally not fixed yet. Its final position can be configured without changing the employee form.</p>
-        <label>Designation<input id="designation" type="text" placeholder="CUSTOMER RELATION EXECUTIVE" autocomplete="off"></label>
-
-        <div class="section-heading spaced"><h2>Employee photo</h2><span>02</span></div>
-        <label class="upload-box" for="photoInput">
-          <strong>Upload passport-size photo</strong>
-          <small>JPG, PNG or WebP · Drag the photo in the preview · Use zoom to crop</small>
-          <input id="photoInput" type="file" accept="image/jpeg,image/png,image/webp">
-        </label>
-        <div class="photo-controls">
-          <label>Zoom<input id="zoom" type="range" min="1" max="4" step="0.01" value="1"></label>
-          <button id="resetPhoto" class="secondary" type="button">Reset</button>
+    <div class="app-body">
+      <aside class="sidebar">
+        <div class="side-tabs" role="tablist">
+          <button class="side-tab active" type="button" role="tab" aria-selected="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.2"/><path d="M5.5 20c.8-3.4 3-5.2 6.5-5.2s5.7 1.8 6.5 5.2"/></svg>Employee Details</button>
+          <button class="side-tab" type="button" role="tab" aria-selected="false" id="designTab"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8 15 1.5-3.5L15 7l2 2-4.5 5.5zM15 7l2 2"/></svg>Design</button>
         </div>
-
-        <div class="section-heading spaced"><h2>Standard overlays</h2><span>03</span></div>
-        <label class="upload-box compact" for="frontOverlayInput">
-          <strong>Front overlay</strong>
-          <small>Transparent PNG recommended</small>
-          <input id="frontOverlayInput" type="file" accept="image/png,image/jpeg,image/webp">
-        </label>
-        <label class="upload-box compact" for="backOverlayInput">
-          <strong>Rear overlay</strong>
-          <small>Transparent PNG recommended</small>
-          <input id="backOverlayInput" type="file" accept="image/png,image/jpeg,image/webp">
-        </label>
-        <p id="overlayStatus" class="field-note">No overlay loaded. The supplied standard artwork will determine the final visual layout.</p>
-
-        <div class="section-heading spaced"><h2>Rear side data</h2><span>04</span></div>
-        <label>Emergency Address<textarea id="address" rows="4" placeholder="Enter emergency address"></textarea></label>
-        <label>Emergency Contact<input id="contact" type="tel" placeholder="Enter contact number"></label>
-        <label>Blood Group<select id="bloodGroup"><option value="">Select blood group</option><option>A+</option><option>A-</option><option>B+</option><option>B-</option><option>AB+</option><option>AB-</option><option>O+</option><option>O-</option><option>Unknown</option></select></label>
-
-        <div class="actions">
-          <button id="generate" class="primary" type="button">Generate JPGs</button>
-          <button id="clear" class="secondary" type="button">New Card</button>
+        <div class="form-scroll">
+          <section class="form-section">
+            <h2>Photo</h2>
+            <div class="photo-row">
+              <div class="photo-thumb" id="photoThumb"><span>Photo</span></div>
+              <div class="photo-actions">
+                <label class="blue-action" for="photoInput"><svg viewBox="0 0 24 24"><path d="M12 16V4M8 8l4-4 4 4M5 13v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/></svg>Upload Photo<input id="photoInput" type="file" accept="image/jpeg,image/png,image/webp"></label>
+                <button id="resetPhoto" class="soft-action" type="button"><svg viewBox="0 0 24 24"><path d="M5 8h7M5 8l3-3M5 8l3 3M19 16h-7M19 16l-3-3M19 16l-3 3"/><path d="M8 8a6 6 0 0 1 10.2 2M16 16a6 6 0 0 1-10.2-2"/></svg>Crop / Adjust</button>
+              </div>
+            </div>
+            <div class="photo-zoom"><label for="zoom">Zoom</label><input id="zoom" type="range" min="1" max="4" step="0.01" value="1"></div>
+          </section>
+          <section class="form-section fields-section">
+            <label>Employee Name <em>*</em><input id="name" type="text" placeholder="NIMIKRISHNA M A" autocomplete="off"></label>
+            <label>Designation <em>*</em><input id="designation" type="text" placeholder="CUSTOMER RELATION EXECUTIVE" autocomplete="off"></label>
+            <label>Employee Code <em>*</em><input id="employeeCode" type="text" placeholder="PVM-00001" autocomplete="off"></label>
+            <label>Emergency Address<textarea id="address" rows="4" placeholder="Enter emergency address"></textarea></label>
+            <label>Emergency Contact<input id="contact" type="tel" placeholder="+91 98765 43210"></label>
+            <label>Blood Group<select id="bloodGroup"><option value="">Select blood group</option><option>A+</option><option>A-</option><option>B+</option><option>B-</option><option>AB+</option><option>AB-</option><option>O+</option><option>O-</option><option>Unknown</option></select></label>
+          </section>
+          <section class="hidden-advanced" aria-hidden="true"><input id="frontOverlayInput" type="file" accept="image/png,image/jpeg,image/webp"><input id="backOverlayInput" type="file" accept="image/png,image/jpeg,image/webp"><p id="overlayStatus">No overlay loaded.</p></section>
         </div>
+        <div class="generate-wrap"><button id="generate" class="generate-button" type="button"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="13" rx="2"/><circle cx="9" cy="12.5" r="2"/><path d="M14 11h4M14 14h4"/></svg><span>Generate ID Card</span><span class="generate-caret">⌄</span></button></div>
       </aside>
 
-      <section class="panel preview-panel">
-        <div class="section-heading"><h2>Final-look preview</h2><span>05</span></div>
-        <div class="preview-toolbar">
-          <div><strong>Front &amp; rear</strong><span>Preview follows the supplied overlay geometry.</span></div>
-          <div class="quality-badge">600 DPI master · JPEG 100%</div>
-        </div>
+      <section class="workspace">
+        <div class="preview-heading"><div><span>FRONT</span></div><div><span>BACK</span></div></div>
         <div class="previews">
-          <div class="card-preview"><div class="preview-label">FRONT</div><div class="canvas-wrap"><canvas id="frontCanvas"></canvas></div><small class="drag-help">Drag photo to position</small></div>
-          <div class="card-preview"><div class="preview-label">BACK</div><div class="canvas-wrap"><canvas id="backCanvas"></canvas></div></div>
+          <div class="card-preview"><div class="canvas-wrap"><canvas id="frontCanvas"></canvas></div></div>
+          <div class="card-preview"><div class="canvas-wrap"><canvas id="backCanvas"></canvas></div></div>
         </div>
-        <div class="export-note"><strong>Output naming</strong><span>EMPLOYEE_CODE_FRONT.jpg &nbsp;·&nbsp; EMPLOYEE_CODE_BACK.jpg</span></div>
+        <div class="preview-controls">
+          <div class="zoom-control"><button type="button" id="zoomOut" aria-label="Zoom out">⌕</button><input id="previewZoom" type="range" min="60" max="140" value="100"><span id="previewZoomLabel">100%</span><button type="button" id="zoomIn" aria-label="Zoom in">+</button></div>
+          <div class="output-actions">
+            <button type="button" class="outline-action" id="previewButton"><svg viewBox="0 0 24 24"><path d="M2.5 12s3.5-5 9.5-5 9.5 5 9.5 5-3.5 5-9.5 5-9.5-5-9.5-5z"/><circle cx="12" cy="12" r="2.5"/></svg>Preview</button>
+            <button type="button" class="outline-action" id="downloadButton"><svg viewBox="0 0 24 24"><path d="M12 3v12M8 11l4 4 4-4M5 20h14"/></svg>Download JPG</button>
+            <button type="button" class="outline-action" id="printButton"><svg viewBox="0 0 24 24"><path d="M7 9V4h10v5M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M7 14h10v6H7z"/><path d="M18 12h.01"/></svg>Print</button>
+            <button type="button" class="save-template" id="saveTemplateButton"><svg viewBox="0 0 24 24"><path d="M5 3h11l3 3v15H5z"/><path d="M8 3v6h8V3M8 17h8"/></svg>Save Template</button>
+          </div>
+        </div>
       </section>
-    </section>
+    </div>
+    <footer class="statusbar"><div class="ready-status"><span></span> Ready</div><div>Template: Jayalakshmi <i></i> Size: 54mm x 86mm <i></i> 600 DPI Output</div></footer>
   </main>
+  <div id="updateStatus" class="update-status-hidden"><span></span> Update service ready</div>
   <script src="app.js"></script>
   <script src="updater-renderer.js"></script>
+  <script>
+    (() => {
+      const $ = id => document.getElementById(id); const root = document.documentElement;
+      const updateZoom = value => { root.style.setProperty('--preview-scale', `${Number(value) / 100}`); $('previewZoomLabel').textContent = `${value}%`; };
+      $('previewZoom')?.addEventListener('input', e => updateZoom(e.target.value));
+      $('zoomOut')?.addEventListener('click', () => { const r=$('previewZoom'); r.value=Math.max(60,Number(r.value)-10); updateZoom(r.value); });
+      $('zoomIn')?.addEventListener('click', () => { const r=$('previewZoom'); r.value=Math.min(140,Number(r.value)+10); updateZoom(r.value); });
+      $('previewButton')?.addEventListener('click', () => document.body.classList.toggle('focus-preview'));
+      $('downloadButton')?.addEventListener('click', () => $('generate')?.click());
+      $('printButton')?.addEventListener('click', () => window.print());
+      $('aboutButton')?.addEventListener('click', () => alert('Jayalakshmi ID Card Generator\nv0.2.0\n\n600 DPI employee ID card production studio.'));
+      $('templatesButton')?.addEventListener('click', () => alert('Template library is ready for the next template-management phase.'));
+      $('saveTemplateButton')?.addEventListener('click', () => alert('Template saving will store the current design settings in the template library.'));
+      document.querySelectorAll('[data-window-action]').forEach(button => button.addEventListener('click', () => { if (window.idCardDesktop?.windowControl) window.idCardDesktop.windowControl(button.dataset.windowAction); }));
+      updateZoom(100);
+    })();
+  </script>
 </body>
 </html>
