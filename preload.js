@@ -6,6 +6,7 @@ contextBridge.exposeInMainWorld('idCardDesktop', {
   checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
   downloadUpdate: () => ipcRenderer.invoke('download-update'),
   installUpdate: () => ipcRenderer.invoke('install-update'),
+  windowControl: (action) => ipcRenderer.invoke('window-control', action),
   onUpdateStatus: (callback) => {
     const listener = (_event, payload) => callback(payload);
     ipcRenderer.on('update-status', listener);
