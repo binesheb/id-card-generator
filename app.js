@@ -3,19 +3,25 @@ const FALLBACK_SIZE = { width: 625, height: 965 };
 const CARD_FONT = 'Satoshi, Arial, Helvetica, sans-serif';
 
 // Positions are proportional so the supplied production overlay controls the final canvas size.
-// Font sizing is calibrated against the supplied 625x965 reference image.
+// Typography and photo geometry are calibrated against the supplied 625x965 reference.
 const TEMPLATE = {
-  photo: { x: 0.2096, y: 0.1461, w: 0.5872, h: 0.4487 },
-  name: { x: 0.50, y: 0.655, maxWidth: 0.90, size: 0.068, weight: 500, letterSpacing: 0.09 },
-  designation: { x: 0.50, y: 0.719, maxWidth: 0.94, size: 0.045, weight: 700, letterSpacing: 0.025 },
-  employeeCode: { x: 0.50, y: 0.772, maxWidth: 0.70, size: 0.022, weight: 600, enabled: true }
+  // Passport photo area from the supplied sample. The photo is clipped to a rounded rectangle.
+  photo: { x: 0.2096, y: 0.1461, w: 0.5872, h: 0.4487, radius: 0.028 },
+  // Name is deliberately lower than the photo to prevent visual collision.
+  name: { x: 0.50, y: 0.678, maxWidth: 0.90, size: 0.068, weight: 500, letterSpacing: 0.09 },
+  designation: { x: 0.50, y: 0.739, maxWidth: 0.94, size: 0.045, weight: 700, letterSpacing: 0.025 },
+  // Employee code is larger and slightly higher for reliable print readability.
+  employeeCode: { x: 0.50, y: 0.778, maxWidth: 0.70, size: 0.029, weight: 700, letterSpacing: 0.025, enabled: true }
 };
 
+// Rear-side information is rendered as distinct light cards so the variable text remains
+// readable over the decorative red/gold artwork regardless of the underlying overlay.
 const BACK_TEXT = {
   heading: { x: 0.50, y: 0.20, size: 0.042 },
   address: { x: 0.12, y: 0.34, maxWidth: 0.76, size: 0.028, lineGap: 0.055 },
   contact: { x: 0.12, y: 0.67, size: 0.030 },
-  blood: { x: 0.12, y: 0.77, size: 0.030 }
+  blood: { x: 0.12, y: 0.77, size: 0.030 },
+  card: { x: 0.09, w: 0.82, radius: 0.018, padding: 0.025 }
 };
 
 const $ = id => document.getElementById(id);
@@ -57,7 +63,18 @@ function drawBackground(ctx, canvas) {
 
 function photoBox(canvas) {
   const r = TEMPLATE.photo;
-  return { x: canvas.width * r.x, y: canvas.height * r.y, w: canvas.width * r.w, h: canvas.height * r.h };
+  return { x: canvas.width * r.x, y: canvas.height * r.y, w: canvas.width * r.w, h: canvas.height * r.h, radius: canvas.width * r.radius };
+}
+
+function roundedRectPath(ctx, x, y, w, h, radius) {
+  const r = Math.max(0, Math.min(radius, Math.min(w, h) / 2));
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
 }
 
 function currentPhotoGeometry(canvas) {
@@ -89,12 +106,21 @@ function drawFront() {
   if (photo) {
     const { box, w, h, baseX, baseY } = currentPhotoGeometry(canvas);
     ctx.save();
-    ctx.beginPath();
-    ctx.rect(box.x, box.y, box.w, box.h);
+    // Rounded photo crop: the employee photograph itself has the same rounded silhouette
+    // visible in the supplied sample, rather than a square crop underneath the overlay.
+    roundedRectPath(ctx, box.x, box.y, box.w, box.h, box.radius);
     ctx.clip();
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
     ctx.drawImage(photo, baseX + photoState.x, baseY + photoState.y, w, h);
+    ctx.restore();
+
+    // Fine light border around the photo keeps the rounded edge clean on print.
+    ctx.save();
+    roundedRectPath(ctx, box.x, box.y, box.w, box.h, box.radius);
+    ctx.strokeStyle = 'rgba(255,255,255,0.92)';
+    ctx.lineWidth = Math.max(2, canvas.width * 0.004);
+    ctx.stroke();
     ctx.restore();
   }
 
@@ -116,11 +142,68 @@ function drawBack() {
   const scale = canvas.width;
   drawText(ctx, 'EMERGENCY DETAILS', BACK_TEXT.heading.x * canvas.width, BACK_TEXT.heading.y * canvas.height, scale * BACK_TEXT.heading.size, 700, 'center');
 
+  // Address card: generous padding and automatic line fitting for long addresses.
+  const cardX = canvas.width * BACK_TEXT.card.x;
+  const cardW = canvas.width * BACK_TEXT.card.w;
+  const cardRadius = canvas.width * BACK_TEXT.card.radius;
   const address = els.address.value.trim();
-  const lines = (address || 'Emergency address').split(/\r?\n/).slice(0, 5);
-  lines.forEach((line, i) => drawTextFitted(ctx, line, BACK_TEXT.address.x * canvas.width, canvas.height * (BACK_TEXT.address.y + i * BACK_TEXT.address.lineGap), scale * BACK_TEXT.address.size, canvas.width * BACK_TEXT.address.maxWidth, 500, 'left'));
-  drawText(ctx, `Contact: ${els.contact.value.trim() || '—'}`, BACK_TEXT.contact.x * canvas.width, BACK_TEXT.contact.y * canvas.height, scale * BACK_TEXT.contact.size, 700, 'left');
-  drawText(ctx, `Blood Group: ${els.bloodGroup.value || '—'}`, BACK_TEXT.blood.x * canvas.width, BACK_TEXT.blood.y * canvas.height, scale * BACK_TEXT.blood.size, 700, 'left');
+  const addressLines = wrapText(ctx, address || 'Emergency address', scale * BACK_TEXT.address.size, cardW - 2 * canvas.width * BACK_TEXT.card.padding, 500, 5);
+  const addressLineHeight = scale * 0.044;
+  const addressTop = canvas.height * 0.315;
+  const addressHeight = Math.max(canvas.height * 0.105, addressLines.length * addressLineHeight + canvas.height * 0.055);
+  drawInfoCard(ctx, cardX, addressTop, cardW, addressHeight, cardRadius);
+  addressLines.forEach((line, i) => drawTextFitted(
+    ctx,
+    line,
+    cardX + canvas.width * BACK_TEXT.card.padding,
+    addressTop + canvas.height * 0.034 + i * addressLineHeight,
+    scale * BACK_TEXT.address.size,
+    cardW - 2 * canvas.width * BACK_TEXT.card.padding,
+    500,
+    'left'
+  ));
+
+  const contactTop = canvas.height * 0.635;
+  const contactHeight = canvas.height * 0.075;
+  drawInfoCard(ctx, cardX, contactTop, cardW, contactHeight, cardRadius);
+  drawTextFitted(ctx, `Contact: ${els.contact.value.trim() || '—'}`, cardX + canvas.width * BACK_TEXT.card.padding, contactTop + contactHeight / 2, scale * BACK_TEXT.contact.size, cardW - 2 * canvas.width * BACK_TEXT.card.padding, 700, 'left');
+
+  const bloodTop = canvas.height * 0.735;
+  const bloodHeight = canvas.height * 0.075;
+  drawInfoCard(ctx, cardX, bloodTop, cardW, bloodHeight, cardRadius);
+  drawTextFitted(ctx, `Blood Group: ${els.bloodGroup.value || '—'}`, cardX + canvas.width * BACK_TEXT.card.padding, bloodTop + bloodHeight / 2, scale * BACK_TEXT.blood.size, cardW - 2 * canvas.width * BACK_TEXT.card.padding, 700, 'left');
+}
+
+function drawInfoCard(ctx, x, y, w, h, radius) {
+  ctx.save();
+  roundedRectPath(ctx, x, y, w, h, radius);
+  ctx.fillStyle = 'rgba(255,255,255,0.94)';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(218,178,112,0.95)';
+  ctx.lineWidth = Math.max(2, ctx.canvas.width * 0.0025);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function wrapText(ctx, value, size, maxWidth, weight, maxLines) {
+  setCardFont(ctx, weight, size);
+  const words = value.replace(/\s+/g, ' ').trim().split(' ');
+  const lines = [];
+  let line = '';
+  words.forEach(word => {
+    const candidate = line ? `${line} ${word}` : word;
+    if (ctx.measureText(candidate).width <= maxWidth || !line) {
+      line = candidate;
+    } else if (lines.length < maxLines - 1) {
+      lines.push(line);
+      line = word;
+    } else {
+      line = `${line} ${word}`;
+    }
+  });
+  if (line) lines.push(line);
+  if (lines.length > maxLines) lines.length = maxLines;
+  return lines;
 }
 
 function setCardFont(ctx, weight, size) {
@@ -289,7 +372,7 @@ function stampJpegDpi(dataUrl, dpi) {
       if (bytes[i] === 0xFF && bytes[i + 1] === 0xE0 &&
           bytes[i + 4] === 0x4A && bytes[i + 5] === 0x46 && bytes[i + 6] === 0x49 &&
           bytes[i + 7] === 0x46 && bytes[i + 8] === 0x00) {
-        bytes[i + 11] = 1; // units: dots per inch
+        bytes[i + 11] = 1;
         bytes[i + 12] = (dpi >> 8) & 0xFF;
         bytes[i + 13] = dpi & 0xFF;
         bytes[i + 14] = (dpi >> 8) & 0xFF;
@@ -340,27 +423,26 @@ async function generateFiles() {
 
   if (!outputDirectory) outputDirectory = await window.idCardDesktop.chooseOutputDirectory();
   if (!outputDirectory) return false;
-  await window.idCardDesktop.saveJpgs({ directory: outputDirectory, files });
+  for (const file of files) await window.idCardDesktop.saveJpeg({ directory: outputDirectory, filename: file.name, dataUrl: file.dataUrl });
   return true;
 }
 
 els.generate.addEventListener('click', async () => {
-  if (!els.employeeCode.value.trim()) {
-    alert('Please enter Employee Code before generating the JPG files.');
-    els.employeeCode.focus();
-    return;
-  }
   try {
-    const saved = await generateFiles();
-    if (saved) alert(`ID card JPGs generated successfully.\n\n${safeCode()}_FRONT.jpg\n${safeCode()}_BACK.jpg`);
+    els.generate.disabled = true;
+    els.generate.textContent = 'Generating…';
+    const generated = await generateFiles();
+    if (generated) alert('Front and rear JPGs generated successfully.');
   } catch (error) {
-    console.error(error);
-    alert(`Could not generate the JPG files.\n\n${error.message || error}`);
+    alert(error.message || 'Could not generate the ID card.');
+  } finally {
+    els.generate.disabled = false;
+    els.generate.textContent = 'Generate JPGs';
   }
 });
 
 els.clear.addEventListener('click', () => {
-  ['name','employeeCode','designation','address','contact'].forEach(id => els[id].value = '');
+  ['name','employeeCode','designation','address','contact'].forEach(id => { els[id].value = ''; });
   els.bloodGroup.value = '';
   els.photoInput.value = '';
   els.frontOverlayInput.value = '';
@@ -375,6 +457,4 @@ els.clear.addEventListener('click', () => {
   draw();
 });
 
-updateOverlayStatus();
 draw();
-waitForFonts().then(draw);
