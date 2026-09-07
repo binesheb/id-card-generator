@@ -32,7 +32,7 @@ for (const id of ['name', 'employeeCode', 'designation', 'photoInput', 'frontOve
 }
 
 const app = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
-for (const token of ['toDataURL', 'saveJpgs', 'chooseOutputDirectory', 'frontOverlay', 'backOverlay', 'photoState', 'safeCode']) {
+for (const token of ['toDataURL', 'saveJpeg', 'chooseOutputDirectory', 'frontOverlay', 'backOverlay', 'photoState', 'safeCode', 'roundedRectPath', 'drawInfoCard']) {
   if (!app.includes(token)) throw new Error(`Missing application capability: ${token}`);
 }
 
