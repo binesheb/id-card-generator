@@ -26,6 +26,20 @@ jobs:
       - name: Install dependencies
         run: npm install --no-audit --no-fund
 
+      - name: Validate release version
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        run: |
+          $package = Get-Content package.json -Raw | ConvertFrom-Json
+          $tagVersion = '${{ github.ref_name }}'.Substring(1)
+          if ($package.version -ne $tagVersion) {
+            throw "Release tag $tagVersion does not match package.json version $($package.version)."
+          }
+          if (-not (Select-String -Path CHANGELOG.md -Pattern "^## $tagVersion$" -Quiet)) {
+            throw "CHANGELOG.md does not contain a release entry for $tagVersion."
+          }
+          Write-Host "Validated release version $tagVersion"
+
       - name: Validate and smoke-test source
         run: npm test
 
@@ -66,9 +80,10 @@ jobs:
 
       - name: Publish tagged release
         if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
+        uses: softprops/action-gh-release@v3.0.3
         with:
           tag_name: ${{ github.ref_name }}
+          name: Jayalakshmi ID Card Generator ${{ github.ref_name }}
           generate_release_notes: true
           files: |
             dist/*-Setup.exe
