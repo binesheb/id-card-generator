@@ -10,7 +10,7 @@
   <main class="app-shell">
     <header class="topbar">
       <div class="brand-lockup">
-        <div class="brand-mark" aria-label="Jayalakshmi"><img src="assets/jayalakshmi-logo.svg" alt="Jayalakshmi" class="brand-logo"></div>
+        <div class="brand-mark" aria-label="Jayalakshmi"><img src="assets/jayalakshmi-logo.png" alt="Jayalakshmi" class="brand-logo"></div>
         <div class="product-title"><h1>ID Card Generator <span>v0.2.0</span></h1></div>
       </div>
       <nav class="top-actions" aria-label="Application actions">
@@ -24,10 +24,10 @@
     <div class="app-body">
       <aside class="sidebar">
         <div class="side-tabs" role="tablist">
-          <button class="side-tab active" type="button" role="tab" aria-selected="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.2"/><path d="M5.5 20c.8-3.4 3-5.2 6.5-5.2s5.7 1.8 6.5 5.2"/></svg>Employee Details</button>
+          <button class="side-tab active" type="button" role="tab" aria-selected="true" id="employeeTab"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.2"/><path d="M5.5 20c.8-3.4 3-5.2 6.5-5.2s5.7 1.8 6.5 5.2"/></svg>Employee Details</button>
           <button class="side-tab" type="button" role="tab" aria-selected="false" id="designTab"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8 15 1.5-3.5L15 7l2 2-4.5 5.5zM15 7l2 2"/></svg>Design</button>
         </div>
-        <div class="form-scroll">
+        <div class="form-scroll" id="employeePanel">
           <section class="form-section">
             <h2>Photo</h2>
             <div class="photo-row">
@@ -37,7 +37,7 @@
                 <button id="resetPhoto" class="soft-action" type="button"><svg viewBox="0 0 24 24"><path d="M5 8h7M5 8l3-3M5 8l3 3M19 16h-7M19 16l-3-3M19 16l-3 3"/><path d="M8 8a6 6 0 0 1 10.2 2M16 16a6 6 0 0 1-10.2-2"/></svg>Crop / Adjust</button>
               </div>
             </div>
-            <div class="photo-zoom"><label for="zoom">Zoom</label><input id="zoom" type="range" min="1" max="4" step="0.01" value="1"></div>
+            <div class="photo-zoom" id="photoZoomPanel"><label for="zoom">Crop / Resize</label><div class="range-with-value"><input id="zoom" type="range" min="1" max="4" step="0.01" value="1"><output id="photoZoomValue">100%</output></div><small>Drag the photo on the card preview to reposition it.</small></div>
           </section>
           <section class="form-section fields-section">
             <label>Employee Name <em>*</em><input id="name" type="text" placeholder="NIMIKRISHNA M A" autocomplete="off"></label>
@@ -47,8 +47,27 @@
             <label>Emergency Contact<input id="contact" type="tel" placeholder="+91 98765 43210"></label>
             <label>Blood Group<select id="bloodGroup"><option value="">Select blood group</option><option>A+</option><option>A-</option><option>B+</option><option>B-</option><option>AB+</option><option>AB-</option><option>O+</option><option>O-</option><option>Unknown</option></select></label>
           </section>
-          <section class="hidden-advanced" aria-hidden="true"><input id="frontOverlayInput" type="file" accept="image/png,image/jpeg,image/webp"><input id="backOverlayInput" type="file" accept="image/png,image/jpeg,image/webp"><p id="overlayStatus">No overlay loaded.</p></section>
         </div>
+
+        <div class="design-scroll" id="designPanel" hidden>
+          <section class="design-intro">
+            <h2>Card Design</h2>
+            <p>Upload the standard front and back artwork used as the card background. The artwork is kept at its original proportions and dimensions in the generated card.</p>
+          </section>
+          <section class="overlay-upload-card">
+            <div class="overlay-card-title"><span class="design-number">01</span><div><strong>Front Image</strong><small>Standard front card artwork</small></div></div>
+            <label class="design-upload" for="frontOverlayInput"><span class="design-upload-icon">↑</span><span><strong>Upload Front Image</strong><small>PNG, JPG or WebP</small></span></label>
+            <div class="overlay-file-state" id="frontOverlayState">No front image selected</div>
+          </section>
+          <section class="overlay-upload-card">
+            <div class="overlay-card-title"><span class="design-number">02</span><div><strong>Back Image</strong><small>Standard back card artwork</small></div></div>
+            <label class="design-upload" for="backOverlayInput"><span class="design-upload-icon">↑</span><span><strong>Upload Back Image</strong><small>PNG, JPG or WebP</small></span></label>
+            <div class="overlay-file-state" id="backOverlayState">No back image selected</div>
+          </section>
+          <section class="design-status-card" id="designStatusCard"><span class="status-dot"></span><div><strong>Artwork status</strong><p id="overlayStatusVisible">Upload both front and back images to begin.</p></div></section>
+          <div class="hidden-advanced" aria-hidden="true"><input id="frontOverlayInput" type="file" accept="image/png,image/jpeg,image/webp"><input id="backOverlayInput" type="file" accept="image/png,image/jpeg,image/webp"><p id="overlayStatus">No overlay loaded.</p></div>
+        </div>
+
         <div class="generate-wrap"><button id="generate" class="generate-button" type="button"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="13" rx="2"/><circle cx="9" cy="12.5" r="2"/><path d="M14 11h4M14 14h4"/></svg><span>Generate ID Card</span><span class="generate-caret">⌄</span></button></div>
       </aside>
 
@@ -71,8 +90,17 @@
     </div>
     <footer class="statusbar"><div class="ready-status"><span></span> Ready</div><div>Template: Jayalakshmi <i></i> Size: 54mm x 86mm <i></i> 600 DPI Output</div></footer>
   </main>
+  <div id="cropModal" class="crop-modal" hidden>
+    <div class="crop-dialog" role="dialog" aria-modal="true" aria-labelledby="cropTitle">
+      <div class="crop-header"><div><h2 id="cropTitle">Crop / Adjust Photo</h2><p>Position and resize the employee photo inside the card frame.</p></div><button id="closeCrop" class="crop-close" type="button" aria-label="Close">×</button></div>
+      <div class="crop-preview"><canvas id="cropCanvas" width="500" height="500"></canvas><div class="crop-guide">Photo area</div></div>
+      <div class="crop-controls"><label>Zoom <input id="cropZoom" type="range" min="100" max="400" value="100"><output id="cropZoomValue">100%</output></label><button type="button" id="cropReset" class="soft-action">Reset Position</button><button type="button" id="cropDone" class="blue-action">Done</button></div>
+      <p class="crop-hint">Drag inside the preview to move the photo. Use the slider to resize it.</p>
+    </div>
+  </div>
   <div id="updateStatus" class="update-status-hidden"><span></span> Update service ready</div>
   <script src="app.js"></script>
+  <script src="ui-enhancements.js"></script>
   <script src="updater-renderer.js"></script>
   <script>
     (() => {
