@@ -22,9 +22,23 @@ Phase 1 is completely independent of HROne.
 - `<EMPLOYEE_CODE>_FRONT.jpg`
 - `<EMPLOYEE_CODE>_BACK.jpg`
 
-The application renders directly from the card canvas instead of taking a browser screenshot. JPEG export uses maximum encoder quality (`1.0`). The supplied overlay pixel dimensions are authoritative; the application does not silently resize the production artwork to an assumed card ratio.
+The application renders directly from the card canvas instead of taking a browser screenshot. JPEG export uses maximum encoder quality (`1.0`) and attempts to stamp the JPEG JFIF density to **600 DPI**. The supplied overlay pixel dimensions are authoritative; the application does not silently resize the production artwork to an assumed card ratio.
 
-The project uses a 600-DPI print-master target for calibration/documentation. The actual exported pixel dimensions come from the production overlay artwork. This is intentional: DPI metadata alone does not create additional image detail, so the final overlay should be supplied at the desired print resolution.
+The project uses a 600-DPI print-master target for calibration/documentation. DPI metadata does not create additional image detail, so the final overlay should be supplied at the desired pixel dimensions for printing.
+
+## Project file map
+
+- `index.html` — desktop application UI and form structure.
+- `styles.css` — application styling and bundled font declarations.
+- `app.js` — ID-card rendering, photo crop/positioning, variable text, validation and JPG export.
+- `electron-main.js` — Electron main process, secure IPC, native output-folder selection, file writing and update service.
+- `preload.js` — narrow context-isolated bridge between the renderer and Electron main process.
+- `updater-renderer.js` — update status UI, download and installation controls.
+- `package.json` — dependencies, scripts, Electron Builder configuration and GitHub update provider.
+- `fonts/` — bundled fonts used by the application. Keeping these files in the package avoids depending on fonts installed on the Windows PC.
+- `TEMPLATE.md` — current template/rendering specification and provisional geometry.
+- `tests/smoke-check.js` — repository-level structural and configuration smoke test.
+- `.github/workflows/windows-build.yml` — Windows CI, automated tests, packaging, artifact verification and tagged release publishing.
 
 ## Windows Application
 
@@ -33,10 +47,12 @@ Built with Electron and electron-builder.
 The GitHub Actions workflow:
 
 - Installs dependencies
-- Performs JavaScript syntax validation
+- Runs syntax and structural smoke tests
 - Builds Windows NSIS installer and portable executable
-- Verifies that build artifacts were created
-- Uploads the Windows artifacts for testing
+- Verifies installer, portable executable and updater metadata
+- Calculates SHA-256 hashes in the build log
+- Uploads Windows artifacts for testing
+- Publishes tagged releases with updater metadata
 
 ### Local development
 
@@ -48,7 +64,7 @@ npm start
 ### Validate source
 
 ```bash
-npm run check
+npm test
 ```
 
 ### Build Windows packages
@@ -56,6 +72,12 @@ npm run check
 ```bash
 npm run dist
 ```
+
+## Self-update
+
+Installed Windows builds use `electron-updater` with GitHub Releases as the update provider. The application checks for updates shortly after startup and also provides a manual **Check for Updates** action. When a release is available it can be downloaded and installed with an application restart.
+
+Production updates require a published GitHub Release containing the installer and generated updater metadata. The portable build is provided for convenience; the **NSIS installed build is the recommended deployment target for self-updating production PCs**.
 
 ## Overlay Model
 
