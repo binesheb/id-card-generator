@@ -8,7 +8,7 @@
   "private": true,
   "scripts": {
     "start": "electron .",
-    "check": "node --check app.js && node --check electron-main.js && node --check preload.js && node --check updater-renderer.js && node --check ui-enhancements.js && node --check functional-ui.js && node --check layer-order.js",
+    "check": "node --check app.js && node --check electron-main.js && node --check preload.js && node --check updater-renderer.js",
     "test": "npm run check && node tests/smoke-check.js",
     "dist": "npm run test && electron-builder --win nsis portable --publish never",
     "dist:installer": "npm run test && electron-builder --win nsis --publish never",
@@ -16,7 +16,7 @@
   },
   "devDependencies": {
     "electron": "^38.0.0",
-    "electron-builder": "^26.0.12"
+    "electron-builder": "^26.0.0"
   },
   "dependencies": {
     "electron-updater": "^6.6.2"
@@ -31,10 +31,7 @@
       "app.js",
       "styles.css",
       "ui-enhancements.css",
-      "ui-enhancements.js",
       "layer-order.css",
-      "layer-order.js",
-      "functional-ui.js",
       "electron-main.js",
       "preload.js",
       "updater-renderer.js",
