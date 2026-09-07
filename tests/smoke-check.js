@@ -1,10 +1,14 @@
 const fs = require('fs');
 const path = require('path');
+const { execFileSync } = require('child_process');
 
 const root = path.resolve(__dirname, '..');
 const requiredFiles = [
   'index.html',
   'styles.css',
+  'ui-enhancements.css',
+  'ui-enhancements.js',
+  'functional-ui.js',
   'app.js',
   'electron-main.js',
   'preload.js',
@@ -18,6 +22,10 @@ for (const file of requiredFiles) {
   if (!fs.existsSync(path.join(root, file))) throw new Error(`Missing required file: ${file}`);
 }
 
+for (const file of ['app.js','ui-enhancements.js','functional-ui.js','electron-main.js','preload.js','updater-renderer.js']) {
+  execFileSync(process.execPath, ['--check', path.join(root, file)], { stdio: 'pipe' });
+}
+
 const packageJson = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
 if (!packageJson.main || packageJson.main !== 'electron-main.js') throw new Error('package.json main entry is incorrect.');
 if (!packageJson.dependencies?.['electron-updater']) throw new Error('electron-updater dependency is missing.');
@@ -27,18 +35,28 @@ if (packageJson.build?.publish?.[0]?.owner !== 'binesheb') throw new Error('GitH
 if (packageJson.build?.publish?.[0]?.repo !== 'id-card-generator') throw new Error('GitHub updater repository is incorrect.');
 
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
-for (const id of ['name', 'employeeCode', 'designation', 'photoInput', 'frontOverlayInput', 'backOverlayInput', 'address', 'contact', 'bloodGroup', 'frontCanvas', 'backCanvas', 'generate']) {
+for (const id of ['name','employeeCode','designation','photoInput','frontOverlayInput','backOverlayInput','address','contact','bloodGroup','frontCanvas','backCanvas','generate','cropModal','cropCanvas','cropDone','previewButton','downloadButton','printButton','saveTemplateButton','templatesButton']) {
   if (!html.includes(`id="${id}"`)) throw new Error(`Missing UI element: ${id}`);
+}
+for (const script of ['app.js','ui-enhancements.js','updater-renderer.js','functional-ui.js']) {
+  if (!html.includes(`src="${script}"`)) throw new Error(`Missing UI script: ${script}`);
 }
 
 const app = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
-for (const token of ['toDataURL', 'jpegData', 'chooseOutputDirectory', 'frontOverlay', 'backOverlay', 'photoState', 'safeCode', 'roundedRectPath', 'drawInfoCard']) {
+for (const token of ['toDataURL','jpegData','chooseOutputDirectory','frontOverlay','backOverlay','photoState','safeCode','roundedRectPath','drawInfoCard','saveJpgs']) {
   if (!app.includes(token)) throw new Error(`Missing application capability: ${token}`);
 }
 
+const functional = fs.readFileSync(path.join(root, 'functional-ui.js'), 'utf8');
+for (const token of ['openCrop','bakeCrop','preview','downloadJpgs','printCards','saveTemplate','templates','setInputFile','DataTransfer']) {
+  if (!functional.includes(token)) throw new Error(`Missing functional UI capability: ${token}`);
+}
+if (functional.includes('Template saving will store the current design settings')) throw new Error('Placeholder template action is still present.');
+if (functional.includes('Template library is ready for the next template-management phase')) throw new Error('Placeholder template library action is still present.');
+
 const main = fs.readFileSync(path.join(root, 'electron-main.js'), 'utf8');
-for (const token of ['autoUpdater', 'contextIsolation: true', 'nodeIntegration: false', 'sandbox: true', 'save-jpgs']) {
+for (const token of ['autoUpdater','contextIsolation: true','nodeIntegration: false','sandbox: true','save-jpgs','window-control']) {
   if (!main.includes(token)) throw new Error(`Missing desktop capability/security setting: ${token}`);
 }
 
-console.log(`Smoke check passed: ${requiredFiles.length} required files and core application wiring verified.`);
+console.log(`Smoke check passed: ${requiredFiles.length} required files, JavaScript syntax, UI wiring, generation, crop, preview, download, print, template, and desktop capabilities verified.`);
