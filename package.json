@@ -1,6 +1,6 @@
 {
   "name": "jayalakshmi-id-card-generator",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Windows desktop ID card generator for overlay-based employee card printing.",
   "main": "electron-main.js",
   "author": "binesheb",
@@ -9,9 +9,10 @@
   "scripts": {
     "start": "electron .",
     "check": "node --check app.js && node --check electron-main.js && node --check preload.js && node --check updater-renderer.js",
-    "dist": "electron-builder --win nsis portable --publish never",
-    "dist:installer": "electron-builder --win nsis --publish never",
-    "dist:portable": "electron-builder --win portable --publish never"
+    "test": "npm run check && node tests/smoke-check.js",
+    "dist": "npm run test && electron-builder --win nsis portable --publish never",
+    "dist:installer": "npm run test && electron-builder --win nsis --publish never",
+    "dist:portable": "npm run test && electron-builder --win portable --publish never"
   },
   "devDependencies": {
     "electron": "^38.0.0",
