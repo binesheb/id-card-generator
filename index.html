@@ -6,6 +6,7 @@
   <title>Jayalakshmi ID Card Generator</title>
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="ui-enhancements.css">
+  <link rel="stylesheet" href="layer-order.css">
 </head>
 <body>
   <main class="app-shell">
@@ -29,6 +30,12 @@
           <section class="design-intro"><h2>Card Design</h2><p>Upload the standard front and back artwork used as the card background.</p></section>
           <section class="overlay-upload-card"><div class="overlay-card-title"><span class="design-number">01</span><div><strong>Front Image</strong><small>Standard front card artwork</small></div></div><label class="design-upload" for="frontOverlayInput"><span class="design-upload-icon">↑</span><span><strong>Upload Front Image</strong><small>PNG, JPG or WebP</small></span></label><div class="overlay-file-state" id="frontOverlayState">No front image selected</div></section>
           <section class="overlay-upload-card"><div class="overlay-card-title"><span class="design-number">02</span><div><strong>Back Image</strong><small>Standard back card artwork</small></div></div><label class="design-upload" for="backOverlayInput"><span class="design-upload-icon">↑</span><span><strong>Upload Back Image</strong><small>PNG, JPG or WebP</small></span></label><div class="overlay-file-state" id="backOverlayState">No back image selected</div></section>
+          <section class="layer-order-card" aria-labelledby="layerOrderTitle">
+            <div class="layer-order-heading"><div><strong id="layerOrderTitle">Front Layer Order</strong><small>Choose which element appears above the front artwork.</small></div></div>
+            <label class="layer-option"><input type="radio" name="frontLayerOrder" value="photo-front"><span class="layer-option-copy"><strong>TEXT &nbsp;›&nbsp; PHOTO &nbsp;›&nbsp; FRONT IMAGE</strong><small>Photo sits above the front artwork; text remains on top.</small></span></label>
+            <label class="layer-option"><input type="radio" name="frontLayerOrder" value="front-photo"><span class="layer-option-copy"><strong>TEXT &nbsp;›&nbsp; FRONT IMAGE &nbsp;›&nbsp; PHOTO</strong><small>Front artwork sits above the photo; text remains on top.</small></span></label>
+            <div class="layer-order-status" id="layerOrderStatus">TEXT › FRONT IMAGE › PHOTO</div>
+          </section>
           <section class="design-status-card" id="designStatusCard"><span class="status-dot"></span><div><strong>Artwork status</strong><p id="overlayStatusVisible">Upload both front and back images to begin.</p></div></section>
           <div class="hidden-advanced" aria-hidden="true"><input id="frontOverlayInput" type="file" accept="image/png,image/jpeg,image/webp"><input id="backOverlayInput" type="file" accept="image/png,image/jpeg,image/webp"><p id="overlayStatus">No overlay loaded.</p></div>
         </div>
@@ -41,6 +48,7 @@
   <div id="cropModal" class="crop-modal" hidden><div class="crop-dialog" role="dialog" aria-modal="true" aria-labelledby="cropTitle"><div class="crop-header"><div><h2 id="cropTitle">Crop / Adjust Photo</h2><p>Position and resize the employee photo inside the card frame.</p></div><button id="closeCrop" class="crop-close" type="button" aria-label="Close">×</button></div><div class="crop-preview"><canvas id="cropCanvas" width="500" height="590"></canvas><div class="crop-guide">Photo area</div></div><div class="crop-controls"><label>Zoom <input id="cropZoom" type="range" min="100" max="400" value="100"><output id="cropZoomValue">100%</output></label><button type="button" id="cropReset" class="soft-action">Reset Position</button><button type="button" id="cropDone" class="blue-action">Done</button></div><p class="crop-hint">Drag inside the preview to move the photo. Use the slider to resize it.</p></div></div>
   <div id="updateStatus" class="update-status-hidden"><span></span> Update service ready</div>
   <script src="app.js"></script>
+  <script src="layer-order.js"></script>
   <script src="ui-enhancements.js"></script>
   <script src="updater-renderer.js"></script>
   <script src="functional-ui.js"></script>
