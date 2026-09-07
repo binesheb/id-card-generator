@@ -26,7 +26,8 @@
   frontInput?.addEventListener('change',artworkStatus,true); backInput?.addEventListener('change',artworkStatus,true);
 
   let sourceImage=null, sourceUrl=null, cropState={scale:1,x:0,y:0};
-  const TEMPLATE_RATIO=0.5872/0.4487;
+  // The crop frame matches the actual photo slot in the 54 × 86 mm card template.
+  const TEMPLATE_PHOTO_RATIO=(625*0.5872)/(965*0.4487);
   function openCrop(){
     const file=photoInput?.files?.[0];
     if(!file){ alert('Please upload an employee photo first.'); return; }
@@ -39,16 +40,16 @@
     if(!cropCanvas||!sourceImage)return;
     const ctx=cropCanvas.getContext('2d'); const W=cropCanvas.width,H=cropCanvas.height;
     ctx.clearRect(0,0,W,H); ctx.fillStyle='#eef2f7'; ctx.fillRect(0,0,W,H);
-    const pad=24, frame={x:pad,y:pad,w:W-pad*2,h:H-pad*2};
+    const pad=24, frameRatio=TEMPLATE_PHOTO_RATIO, frame={x:pad,y:pad,w:W-pad*2,h:(W-pad*2)/frameRatio}; frame.y=(H-frame.h)/2;
     const fit=Math.max(frame.w/sourceImage.naturalWidth,frame.h/sourceImage.naturalHeight)*cropState.scale;
     const iw=sourceImage.naturalWidth*fit,ih=sourceImage.naturalHeight*fit;
     ctx.save(); ctx.beginPath(); ctx.rect(frame.x,frame.y,frame.w,frame.h); ctx.clip(); ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality='high'; ctx.drawImage(sourceImage,(W-iw)/2+cropState.x,(H-ih)/2+cropState.y,iw,ih); ctx.restore();
-    ctx.strokeStyle='rgba(8,105,220,.9)'; ctx.lineWidth=3; ctx.strokeRect(frame.x,frame.y,frame.w,frame.h); ctx.strokeStyle='rgba(255,255,255,.75)'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(W/2,frame.y);ctx.lineTo(W/2,frame.y+frame.h);ctx.moveTo(frame.x,H/2);ctx.lineTo(frame.x+frame.w,H/2);ctx.stroke();
+    ctx.strokeStyle='rgba(8,105,220,.9)'; ctx.lineWidth=3; ctx.strokeRect(frame.x,frame.y,frame.w,frame.h); ctx.strokeStyle='rgba(255,255,255,.75)'; ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(W/2,frame.y);ctx.lineTo(W/2,frame.y+frame.h);ctx.moveTo(frame.x,frame.y+frame.h/2);ctx.lineTo(frame.x+frame.w,frame.y+frame.h/2);ctx.stroke();
   }
   function closeCrop(){cropModal.hidden=true;document.body.classList.remove('crop-open');if(sourceUrl){URL.revokeObjectURL(sourceUrl);sourceUrl=null;}}
   function bakeCrop(){
     if(!sourceImage)return;
-    const W=1000,H=Math.round(W/TEMPLATE_RATIO), previewW=cropCanvas.width-48,previewH=cropCanvas.height-48;
+    const W=1200,H=Math.round(W/TEMPLATE_PHOTO_RATIO), previewW=cropCanvas.width-48,previewH=cropCanvas.height;
     const fit=Math.max(W/sourceImage.naturalWidth,H/sourceImage.naturalHeight)*cropState.scale, iw=sourceImage.naturalWidth*fit,ih=sourceImage.naturalHeight*fit;
     const px=cropState.x/previewW*W, py=cropState.y/previewH*H;
     const c=document.createElement('canvas'); c.width=W;c.height=H;const ctx=c.getContext('2d'); ctx.fillStyle='#fff';ctx.fillRect(0,0,W,H);ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.drawImage(sourceImage,(W-iw)/2+px,(H-ih)/2+py,iw,ih);
@@ -87,11 +88,13 @@
       localStorage.setItem(TEMPLATE_KEY,JSON.stringify(templates)); alert(`Template "${name}" saved.`);
     } catch(e) { console.error(e); alert('Could not save the template. The artwork may be too large for local template storage.'); }
   }
-  function templates(){
+  async function templates(){
     try {
       const all=JSON.parse(localStorage.getItem(TEMPLATE_KEY)||'{}'); const names=Object.keys(all); const choice=prompt(names.length?`Templates:\n${names.map((n,i)=>`${i+1}. ${n}`).join('\n')}\n\nEnter a template name to load:`:'No saved templates yet. Enter a name to save a new template:');
-      if(!choice)return; if(!all[choice]){if(confirm(`"${choice}" is not saved. Save the current card as this template?`)) saveTemplate();return;}
-      const t=all[choice]; Object.entries(t.fields||{}).forEach(([id,val])=>{if($(id))$(id).value=val;}); ['name','employeeCode','designation','address','contact','bloodGroup'].forEach(id=>$(id)?.dispatchEvent(new Event('input',{bubbles:true})));
+      if(!choice)return;
+      if(!all[choice]){if(confirm(`"${choice}" is not saved. Save the current card as this template?`)) await saveTemplate();return;}
+      const t=all[choice]; Object.entries(t.fields||{}).forEach(([id,val])=>{if($(id))$(id).value=val;});
+      ['name','employeeCode','designation','address','contact','bloodGroup'].forEach(id=>$(id)?.dispatchEvent(new Event('input',{bubbles:true})));
       if(t.front)setInputFile(frontInput,fileFromDataUrl(t.front,'front-template.png')); if(t.back)setInputFile(backInput,fileFromDataUrl(t.back,'back-template.png')); alert(`Template "${choice}" loaded.`);
     } catch(e) { console.error(e); alert('Could not load the template.'); }
   }
