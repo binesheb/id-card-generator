@@ -67,6 +67,14 @@ jobs:
           if ($portable[0].Length -lt 1MB) { throw "Portable executable is unexpectedly small." }
           $latest = @(Get-ChildItem -Path dist -Filter 'latest*.yml' -File)
           if ($latest.Count -lt 1) { throw "Updater metadata latest*.yml was not generated." }
+          $package = Get-Content package.json -Raw | ConvertFrom-Json
+          $metadata = Get-Content $latest[0].FullName -Raw
+          if ($metadata -notmatch "(?m)^version:\s*$([regex]::Escape($package.version))\s*$") {
+            throw "Updater metadata version does not match package.json version $($package.version)."
+          }
+          if ($metadata -notmatch "(?m)^path:\s*.+-Setup\.exe\s*$") {
+            throw "Updater metadata does not reference the generated NSIS installer."
+          }
           Get-FileHash $setup[0].FullName -Algorithm SHA256
           Get-FileHash $portable[0].FullName -Algorithm SHA256
           Get-FileHash $latest[0].FullName -Algorithm SHA256
