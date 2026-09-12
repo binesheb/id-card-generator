@@ -73,6 +73,10 @@ npm test
 npm run dist
 ```
 
+## Release status
+
+The current `main` branch is version **0.2.0** and contains the changes recorded under `0.2.0` in `CHANGELOG.md`. The latest published GitHub Release is **v0.1.5**. Until `v0.2.0` is published, production PCs should continue using the latest published release rather than treating an unreleased `main` build as an update channel.
+
 ## Self-update
 
 Installed Windows builds use `electron-updater` with GitHub Releases as the update provider. The application checks for updates shortly after startup and also provides a manual **Check for Updates** action. When a release is available it can be downloaded and installed with an application restart.
