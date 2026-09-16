@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 
 let mainWindow;
+let updateCheckPromise = null;
 
 function sendUpdateStatus(status, data = {}) {
   if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('update-status', { status, ...data });
@@ -26,13 +27,15 @@ async function checkForUpdates() {
     sendUpdateStatus('dev', { message: 'Update checks are available in the installed Windows application.' });
     return { status: 'dev' };
   }
-  try {
-    const result = await autoUpdater.checkForUpdates();
-    return result?.updateInfo || null;
-  } catch (error) {
-    sendUpdateStatus('error', { message: error?.message || 'Unable to check for updates.' });
-    return null;
-  }
+  if (updateCheckPromise) return updateCheckPromise;
+  updateCheckPromise = autoUpdater.checkForUpdates()
+    .then(result => result?.updateInfo || null)
+    .catch(error => {
+      sendUpdateStatus('error', { message: error?.message || 'Unable to check for updates.' });
+      return null;
+    })
+    .finally(() => { updateCheckPromise = null; });
+  return updateCheckPromise;
 }
 
 ipcMain.handle('check-for-updates', () => checkForUpdates());
