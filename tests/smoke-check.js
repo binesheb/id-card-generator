@@ -15,6 +15,9 @@ if(!packageJson.dependencies?.['electron-updater']) throw new Error('electron-up
 if(packageJson.build?.appId!=='in.jayalakshmi.idcardgenerator') throw new Error('Unexpected Electron appId.');
 if(packageJson.build?.publish?.[0]?.provider!=='github') throw new Error('GitHub updater provider is missing.');
 if(packageJson.build?.publish?.[0]?.owner!=='binesheb'||packageJson.build?.publish?.[0]?.repo!=='id-card-generator') throw new Error('GitHub updater target is incorrect.');
+if(!/^\d+\.\d+\.\d+$/.test(packageJson.version)) throw new Error(`package.json version must use SemVer MAJOR.MINOR.PATCH: ${packageJson.version}`);
+const changelog=fs.readFileSync(path.join(root,'CHANGELOG.md'),'utf8');
+if(!new RegExp(`^## ${packageJson.version.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}$`,'m').test(changelog)) throw new Error(`CHANGELOG.md is missing the current version heading: ${packageJson.version}`);
 
 const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
 for(const id of ['name','employeeCode','designation','photoInput','frontOverlayInput','backOverlayInput','address','contact','bloodGroup','frontCanvas','backCanvas','generate','cropModal','cropCanvas','cropDone','previewButton','downloadButton','printButton','saveTemplateButton','templatesButton','layerOrderStatus']) if(!html.includes(`id="${id}"`)) throw new Error(`Missing UI element: ${id}`);
@@ -37,4 +40,4 @@ for(const token of ['node-version: 24',"FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'tru
 const main=fs.readFileSync(path.join(root,'electron-main.js'),'utf8');
 for(const token of ['autoUpdater','contextIsolation: true','nodeIntegration: false','sandbox: true','save-jpgs','window-control']) if(!main.includes(token)) throw new Error(`Missing desktop capability/security setting: ${token}`);
 
-console.log(`Smoke check passed: ${requiredFiles.length} required files, syntax, single-controller architecture, UI wiring, photo crop/state integration, front layer ordering, address wrapping, preview/download/print, templates, Electron security, desktop output, and Node 24 CI verified.`);
+console.log(`Smoke check passed: ${requiredFiles.length} required files, SemVer/changelog alignment, syntax, single-controller architecture, UI wiring, photo crop/state integration, front layer ordering, address wrapping, preview/download/print, templates, Electron security, desktop output, and Node 24 CI verified.`);
