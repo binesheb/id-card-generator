@@ -15,7 +15,7 @@
     "dist:portable": "npm run test && electron-builder --win portable --publish never"
   },
   "devDependencies": {
-    "electron": "^38.0.0",
+    "electron": "^44.4.5",
     "electron-builder": "^26.0.0"
   },
   "dependencies": {
