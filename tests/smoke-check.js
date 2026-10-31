@@ -45,20 +45,32 @@ function validateActionPins(source, label) {
 
   let checked = 0;
   for (const line of usesLines) {
-    const match = line.match(/^\s*(?:-\s*)?uses:\s*([^\s#]+)(?:\s+#\s*(v[^\s]+))?\s*$/);
+    const match = line.match(/^\s*(?:-\s*)?uses:\s*(?:"([^"]+)"|'([^']+)'|([^#\s]+))(?:\s+#\s*(v[^\s]+))?\s*$/);
     if (!match) throw new Error(label + ' has an unparseable uses: reference: ' + line.trim());
 
-    const reference = match[1];
-    if (reference.startsWith('./') || reference.startsWith('docker://')) continue;
+    const reference = match[1] ?? match[2] ?? match[3];
+    const versionComment = match[4];
+    if (reference.startsWith('./')) continue;
+
+    if (reference.startsWith('docker://')) {
+      if (!/@sha256:[0-9a-f]{64}$/i.test(reference)) {
+        throw new Error(label + ' Docker action must use an immutable SHA-256 image digest: ' + reference);
+      }
+      if (!versionComment || !/^v\d+(?:\.\d+){0,2}(?:[-+][A-Za-z0-9.-]+)?$/.test(versionComment)) {
+        throw new Error(label + ' Docker action must include an explicit version comment: ' + reference);
+      }
+      checked++;
+      continue;
+    }
 
     const at = reference.lastIndexOf('@');
     if (at <= 0) throw new Error(label + ' has an unpinned external action: ' + reference);
 
     const sha = reference.slice(at + 1);
     if (!/^[0-9a-f]{40}$/i.test(sha)) {
-      throw new Error(label + ' action must be pinned to a full 40-character commit SHA: ' + reference);
+      throw new Error(label + ' action must be pinned to a 40-character commit SHA: ' + reference);
     }
-    if (!match[2] || !/^v\d+(?:\.\d+){0,2}(?:[-+][A-Za-z0-9.-]+)?$/.test(match[2])) {
+    if (!versionComment || !/^v\d+(?:\.\d+){0,2}(?:[-+][A-Za-z0-9.-]+)?$/.test(versionComment)) {
       throw new Error(label + ' action pin must include an explicit version comment: ' + reference);
     }
     checked++;
@@ -71,14 +83,20 @@ function validateActionPins(source, label) {
 const actionPinFixture = [
   'jobs:',
   '  reusable:',
-  '    uses: example/reusable/.github/workflows/build.yml@' + 'a'.repeat(40) + ' # v1.2.3',
+  '    uses: "example/reusable/.github/workflows/build.yml@' + 'a'.repeat(40) + '" # v1.2.3',
   '  build:',
   '    steps:',
-  '      - uses: actions/checkout@' + 'b'.repeat(40) + ' # v4'
+  "      - uses: 'actions/checkout@" + 'b'.repeat(40) + "' # v4"
 ].join('\n');
 if (validateActionPins(actionPinFixture, 'Action pin validator fixture') !== 2) {
-  throw new Error('Action pin validator must check both job-level and step-level uses references.');
+  throw new Error('Action pin validator must check quoted job-level and step-level uses references.');
 }
+
+const dockerActionFixture = 'jobs:\n  build:\n    steps:\n      - uses: docker://vendor/tool:1.2.3@sha256:' + 'c'.repeat(64) + ' # v1.2.3';
+if (validateActionPins(dockerActionFixture, 'Docker action validator fixture') !== 1) {
+  throw new Error('Docker action validator must accept a digest-pinned image with a version comment.');
+}
+
 const checkedActions = validateActionPins(workflow, '.github/workflows/windows-build.yml');
 if (checkedActions < 1) throw new Error('Workflow action pin validation did not check any external actions.');
 
@@ -93,6 +111,9 @@ function expectActionPinFailure(source, label) {
 expectActionPinFailure(actionPinFixture.replace('a'.repeat(40), 'a'.repeat(39)), 'Short action SHA');
 expectActionPinFailure(actionPinFixture.replace(' # v1.2.3', ''), 'Missing action version comment');
 expectActionPinFailure('jobs:\n  build:\n    steps:\n      - run: echo no actions', 'Empty action workflow');
+expectActionPinFailure('jobs:\n  build:\n    steps:\n      - uses: docker://vendor/tool:latest # v1.2.3', 'Mutable Docker action image');
+expectActionPinFailure('jobs:\n  build:\n    steps:\n      - uses: docker://vendor/tool@sha256:' + 'c'.repeat(64), 'Docker action missing version comment');
+
 
 const main=fs.readFileSync(path.join(root,'electron-main.js'),'utf8');
 for(const token of ['autoUpdater','contextIsolation: true','nodeIntegration: false','sandbox: true','save-jpgs','window-control']) if(!main.includes(token)) throw new Error(`Missing desktop capability/security setting: ${token}`);
