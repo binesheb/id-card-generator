@@ -35,7 +35,64 @@ if(!app.includes("state.photoState={x:state.crop.x,y:state.crop.y,zoom:state.cro
 if(!app.includes("localStorage.setItem('jayalakshmi-front-layer-order',state.layerOrder)")) throw new Error('Layer-order persistence is missing.');
 
 const workflow=fs.readFileSync(path.join(root,'.github/workflows/windows-build.yml'),'utf8');
-for(const token of ['node-version: 24',"FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'",'actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1','actions/setup-node@820762786026740c76f36085b0efc47a31fe5020','actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f']) if(!workflow.includes(token)) throw new Error(`CI Node 24 migration is incomplete: ${token}`);
+for (const token of ['node-version: 24', "FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'"]) {
+  if (!workflow.includes(token)) throw new Error('CI Node 24 migration is incomplete: ' + token);
+}
+
+function validateActionPins(source, label) {
+  const usesLines = source.split(/\r?\n/).filter(line => /^\s*(?:-\s*)?uses:\s*/.test(line));
+  if (usesLines.length === 0) throw new Error(label + ' contains no workflow uses: references.');
+
+  let checked = 0;
+  for (const line of usesLines) {
+    const match = line.match(/^\s*(?:-\s*)?uses:\s*([^\s#]+)(?:\s+#\s*(v[^\s]+))?\s*$/);
+    if (!match) throw new Error(label + ' has an unparseable uses: reference: ' + line.trim());
+
+    const reference = match[1];
+    if (reference.startsWith('./') || reference.startsWith('docker://')) continue;
+
+    const at = reference.lastIndexOf('@');
+    if (at <= 0) throw new Error(label + ' has an unpinned external action: ' + reference);
+
+    const sha = reference.slice(at + 1);
+    if (!/^[0-9a-f]{40}$/i.test(sha)) {
+      throw new Error(label + ' action must be pinned to a full 40-character commit SHA: ' + reference);
+    }
+    if (!match[2] || !/^v\d+(?:\.\d+){0,2}(?:[-+][A-Za-z0-9.-]+)?$/.test(match[2])) {
+      throw new Error(label + ' action pin must include an explicit version comment: ' + reference);
+    }
+    checked++;
+  }
+
+  if (checked === 0) throw new Error(label + ' contains no external action references to validate.');
+  return checked;
+}
+
+const actionPinFixture = [
+  'jobs:',
+  '  reusable:',
+  '    uses: example/reusable/.github/workflows/build.yml@' + 'a'.repeat(40) + ' # v1.2.3',
+  '  build:',
+  '    steps:',
+  '      - uses: actions/checkout@' + 'b'.repeat(40) + ' # v4'
+].join('\n');
+if (validateActionPins(actionPinFixture, 'Action pin validator fixture') !== 2) {
+  throw new Error('Action pin validator must check both job-level and step-level uses references.');
+}
+const checkedActions = validateActionPins(workflow, '.github/workflows/windows-build.yml');
+if (checkedActions < 1) throw new Error('Workflow action pin validation did not check any external actions.');
+
+function expectActionPinFailure(source, label) {
+  try {
+    validateActionPins(source, label);
+  } catch {
+    return;
+  }
+  throw new Error(label + ' unexpectedly passed.');
+}
+expectActionPinFailure(actionPinFixture.replace('a'.repeat(40), 'a'.repeat(39)), 'Short action SHA');
+expectActionPinFailure(actionPinFixture.replace(' # v1.2.3', ''), 'Missing action version comment');
+expectActionPinFailure('jobs:\n  build:\n    steps:\n      - run: echo no actions', 'Empty action workflow');
 
 const main=fs.readFileSync(path.join(root,'electron-main.js'),'utf8');
 for(const token of ['autoUpdater','contextIsolation: true','nodeIntegration: false','sandbox: true','save-jpgs','window-control']) if(!main.includes(token)) throw new Error(`Missing desktop capability/security setting: ${token}`);
