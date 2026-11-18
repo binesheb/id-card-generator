@@ -39,6 +39,11 @@ for (const token of ['node-version: 24', "FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 't
   if (!workflow.includes(token)) throw new Error('CI Node 24 migration is incomplete: ' + token);
 }
 
+const releaseGate = "if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && vars.PRODUCTION_RELEASE_ENABLED == 'true'";
+if (!workflow.includes(releaseGate)) {
+  throw new Error('Release publishing must be restricted to production-enabled version-tag push events.');
+}
+
 function validateActionPins(source, label) {
   const usesLines = source.split(/\r?\n/).filter(line => /^\s*(?:-\s*)?uses:\s*/.test(line));
   if (usesLines.length === 0) throw new Error(label + ' contains no workflow uses: references.');
