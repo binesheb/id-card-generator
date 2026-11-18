@@ -44,24 +44,24 @@ if (!workflow.includes(releaseGate)) {
   throw new Error('Release publishing must be restricted to production-enabled version-tag push events.');
 }
 
-if (!/^permissions:\r?\n  contents: read[ \\t]*$/m.test(workflow)) {
+if (!/^permissions:\r?\n  contents: read[ \t]*$/m.test(workflow)) {
   throw new Error('Workflow-level token permissions must remain read-only.');
 }
 
-const buildJobStart = workflow.indexOf('  build-windows:\\n');
-const publishJobStart = workflow.indexOf('  publish-release:\\n');
+const buildJobStart = workflow.indexOf('  build-windows:');
+const publishJobStart = workflow.indexOf('  publish-release:');
 if (buildJobStart < 0 || publishJobStart <= buildJobStart) {
   throw new Error('Build and release jobs must remain separate and ordered.');
 }
 const buildJob = workflow.slice(buildJobStart, publishJobStart);
 const publishJob = workflow.slice(publishJobStart);
-if (/^[ \\t]*contents:\\s*write[ \\t]*$/m.test(buildJob)) {
+if (/^[ \t]*contents:\s*write[ \t]*$/m.test(buildJob)) {
   throw new Error('The general Windows build job must not receive repository write permission.');
 }
-if (!/^[ \\t]{4}needs:\\s*build-windows[ \\t]*$/m.test(publishJob)) {
+if (!/^[ \t]{4}needs:\s*build-windows[ \t]*$/m.test(publishJob)) {
   throw new Error('Release publishing must depend on the validated Windows build.');
 }
-if (!/^[ \\t]{4}permissions:\\r?\\n[ \\t]{6}actions:\\s*read[ \\t]*\\r?\\n[ \\t]{6}contents:\\s*write[ \\t]*$/m.test(publishJob)) {
+if (!/^[ \t]{4}permissions:\r?\n[ \t]{6}actions:\s*read[ \t]*\r?\n[ \t]{6}contents:\s*write[ \t]*$/m.test(publishJob)) {
   throw new Error('Only the tag-gated release publisher may receive contents: write.');
 }
 
